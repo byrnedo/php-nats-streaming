@@ -1,0 +1,6 @@
+/vendor/*
+
+!/vendor/.gitkeep
+/.idea
+
+/composer.phar
