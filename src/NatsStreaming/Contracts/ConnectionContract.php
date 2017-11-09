@@ -9,9 +9,9 @@ interface ConnectionContract {
 
     //public function publishAsync($subject, $data, callable $ackHander);
 
-    public function subscribe($subjects, callable $cb, $subscriptionOptions);
-
-    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions);
+//    public function subscribe($subjects, callable $cb, $subscriptionOptions);
+//
+//    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions);
 
     public function disconnect();
 

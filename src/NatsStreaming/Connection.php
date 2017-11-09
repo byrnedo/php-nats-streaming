@@ -9,12 +9,13 @@ use NatsStreaming\Contracts\ConnectionContract;
 use pb\ConnectRequest;
 use pb\ConnectResponse;
 use pb\PubAck;
+use pb\PubMsg;
 use RandomLib\Factory;
 
 class Connection implements ConnectionContract {
 
 
-    const INBOX_LENGTH = 16;
+    const UID_LENGTH = 16;
     const DEFAULT_ACK_PREFIX = '_STAN.acks';
     const DEFAULT_DISCOVER_PREFIX = '_STAN.discover';
     /**
@@ -33,7 +34,7 @@ class Connection implements ConnectionContract {
 
     private $pubPrefix;
 
-    private $subPrefix;
+    //private $subPrefix;
 
     private $subRequests;
 
@@ -41,7 +42,7 @@ class Connection implements ConnectionContract {
 
     private $closeRequests;
 
-    private $ackSubject;
+    //private $ackSubject;
 
 
 //    private $ackSubscription;
@@ -60,7 +61,38 @@ class Connection implements ConnectionContract {
 
     public function publish($subject, $data)
     {
-        // TODO: Implement publish() method.
+
+        $subj = $this->pubPrefix . '.' . $subject;
+        $peGUID = $this->randomGenerator->generateString(self::UID_LENGTH);
+
+        $req = new PubMsg();
+        $req->setClientID($this->clientID);
+        $req->setGuid($peGUID);
+        $req->setSubject($subject);
+        $req->setData($data);
+
+        $bytes = $req->toStream()->getContents();
+
+        $ackSubject = self::DEFAULT_ACK_PREFIX . '.' . $this->randomGenerator->generateString(self::UID_LENGTH);
+
+        $sid   = $this->natsCon->subscribe(
+            $ackSubject,
+            function($message){
+                /**
+                 * @var $message Message
+                 */
+
+               $resp = PubAck::fromStream($message->getBody());
+
+               if ($resp->getError()) {
+                   throw Exception::forFailedAck($resp->getError());
+               }
+
+            }
+        );
+        $this->natsCon->unsubscribe($sid, 1);
+        $this->natsCon->publish($subj, $bytes, $ackSubject);
+        $this->natsCon->wait(1);
     }
 
 //    public function publishAsync($subject, $data, callable $ackHander)
@@ -68,15 +100,15 @@ class Connection implements ConnectionContract {
 //        // TODO: Implement publishAsync() method.
 //    }
 
-    public function subscribe($subjects, callable $cb, $subscriptionOptions)
-    {
-        // TODO: Implement subscribe() method.
-    }
-
-    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions)
-    {
-        // TODO: Implement queueSubscribe() method.
-    }
+//    public function subscribe($subjects, callable $cb, $subscriptionOptions)
+//    {
+//        // TODO: Implement subscribe() method.
+//    }
+//
+//    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions)
+//    {
+//        // TODO: Implement queueSubscribe() method.
+//    }
 
     public function disconnect()
     {
@@ -114,44 +146,37 @@ class Connection implements ConnectionContract {
     }
 
 
-    /**
-     * @param $message Message
-     */
-    private function processAck($message){
-
-        $req = PubAck::fromStream($message->getBody());
-        //TODO - what?
-
-    }
-
     public function connect($timeout = null){
 
         $this->natsCon->connect($timeout);
 
 
-        $hbInbox = $this->randomGenerator->generateString(self::INBOX_LENGTH);
+        $hbInbox = $this->randomGenerator->generateString(self::UID_LENGTH);
 
         $this->natsCon->subscribe($hbInbox, function($message) { $this->processHeartbeat($message);});
 
-        $discoverSubject = $this->options->discoverPrefix . '.' . $this->stanClusterID;
+        $discoverPrefix = $this->options->discoverPrefix ? $this->options->discoverPrefix : self::DEFAULT_DISCOVER_PREFIX;
+
+        $discoverSubject = $discoverPrefix . '.' . $this->stanClusterID;
 
         $req = new ConnectRequest();
         $req->setClientID($this->clientID);
         $req->setHeartbeatInbox($hbInbox);
-
 
         $data = $req->toStream()->getContents();
         /**
          * @var $resp ConnectResponse
          */
         $resp = null;
-        $this->natsCon->request($discoverSubject, $data, $timeout, function($message) use (&$resp) {
+        $this->natsCon->setStreamTimeout($timeout);
+        $this->natsCon->request($discoverSubject, $data, function($message) use (&$resp) {
             $resp = ConnectResponse::fromStream($message->getBody());
         });
 
         if ($resp->getError()) {
             // TODO throw execption
             $this->disconnect();
+            throw Exception::forFailedConnection($resp->getError());
         }
 
 
@@ -161,10 +186,9 @@ class Connection implements ConnectionContract {
         $this->subCloseRequests = $resp->getSubCloseRequests();
         $this->closeRequests = $resp->getCloseRequests();
 
-        $this->ackSubject = self::DEFAULT_ACK_PREFIX . '.' . $this->randomGenerator->generateString(16);
 
         // what to do about this
-        $this->natsCon->subscribe($this->ackSubject, function($message) { $this->processAck($message);});
+        //$this->natsCon->subscribe($this->ackSubject, function($message) { $this->processAck($message);});
 
     }
 }
