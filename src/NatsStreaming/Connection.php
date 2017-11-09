@@ -6,6 +6,8 @@ namespace NatsStreaming;
 use Nats\Message;
 use Nats\Php71RandomGenerator;
 use NatsStreaming\Contracts\ConnectionContract;
+use pb\CloseRequest;
+use pb\CloseResponse;
 use pb\ConnectRequest;
 use pb\ConnectResponse;
 use pb\PubAck;
@@ -112,7 +114,30 @@ class Connection implements ConnectionContract {
 
     public function disconnect()
     {
-        // TODO: Implement disconnect() method.
+
+        if (!$this->closeRequests || !$this->clientID) {
+            return;
+        }
+
+        $req = new CloseRequest();
+
+        $req->setClientID($this->clientID);
+
+        /**
+         * @var $resp CloseResponse
+         */
+        $resp = null;
+
+        $this->natsCon->request($this->closeRequests, $req->toStream()->getContents(), function(&$message) use (&$resp) {
+            /**
+             * @var $message Message
+             */
+            $resp = CloseResponse::fromStream($message->getBody());
+        });
+
+        if ($resp->getError()) {
+            throw Exception::forFailedDisconnection($resp->getError());
+        }
     }
 
     public function natsConn()
@@ -174,7 +199,6 @@ class Connection implements ConnectionContract {
         });
 
         if ($resp->getError()) {
-            // TODO throw execption
             $this->disconnect();
             throw Exception::forFailedConnection($resp->getError());
         }

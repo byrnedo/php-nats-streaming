@@ -34,4 +34,16 @@ class Exception extends \Exception
         return new static(sprintf('Error in Ack message: %s', $response));
     }
 
+    /**
+     * Creates an Exception for a failed disconnection.
+     *
+     * @param string $response The failed error response.
+     *
+     * @return Exception
+     */
+    public static function forFailedDisconnection($response)
+    {
+        return new static(sprintf('Failed to disconnect: %s', $response));
+    }
+
 }
