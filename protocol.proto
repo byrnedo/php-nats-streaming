@@ -51,7 +51,7 @@ message Ack {
 
 // Connection Request
 message ConnectRequest {
-  string clientID       = 1;  // Client name/identifier.
+  string clientID       = 1;  // ConnectionOptions name/identifier.
   string heartbeatInbox = 2;  // Inbox for server initiated heartbeats.
 }
 
@@ -106,7 +106,7 @@ message UnsubscribeRequest {
 
 // Protocol for a client to close a connection
 message CloseRequest {
-  string clientID = 1;  // Client name provided to Connect() requests
+  string clientID = 1;  // ConnectionOptions name provided to Connect() requests
 }
 
 // Response for CloseRequest

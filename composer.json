@@ -9,6 +9,7 @@
         "protobuf-php/protobuf-plugin": "^0.1.2",
         "symfony/console": "^2.8@dev",
         "phpunit/phpunit": "5.3.*",
+        "repejota/nats": "^0.8.6",
         "satooshi/php-coveralls": "dev-master",
         "squizlabs/php_codesniffer": "~2.0",
         "github.com/gogo/protobuf": "dev-master"
