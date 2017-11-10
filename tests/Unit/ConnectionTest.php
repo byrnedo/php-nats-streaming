@@ -73,6 +73,9 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c->close();
     }
 
+    /**
+     * Test Subscribe Command
+     */
     public function testSubscribe(){
         $this->c->connect();
 
@@ -80,7 +83,6 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $got = 0;
         $this->c->subscribe('test.subscribe', function($message) use (&$got){
-
             $got ++;
         }, $subOptions);
 

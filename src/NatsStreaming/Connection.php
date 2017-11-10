@@ -3,7 +3,6 @@
 
 namespace NatsStreaming;
 
-use DateTime;
 use Nats\Message;
 use Nats\Php71RandomGenerator;
 use NatsStreaming\Contracts\ConnectionContract;
@@ -31,7 +30,6 @@ class Connection implements ConnectionContract
      */
     public $options;
 
-
     /**
      * @var \RandomLib\Generator
      */
@@ -39,7 +37,6 @@ class Connection implements ConnectionContract
 
     private $pubPrefix;
 
-    //private $subPrefix;
 
     private $subRequests;
 
@@ -47,15 +44,7 @@ class Connection implements ConnectionContract
 
     private $closeRequests;
 
-    //private $ackSubject;
-
-
-//    private $ackSubscription;
-//    private $hbSubscription;
-
     private $subMap = [];
-
-    //private $pubAckMap = [];
 
     private $connected;
 
@@ -72,6 +61,10 @@ class Connection implements ConnectionContract
 
     private $timeout;
 
+    /**
+     * Connection constructor.
+     * @param ConnectionOptions|null $options
+     */
     public function __construct(ConnectionOptions $options = null)
     {
 
@@ -96,6 +89,8 @@ class Connection implements ConnectionContract
     }
 
     /**
+     * Connect
+     *
      * @param null $timeout
      * @throws Exception
      */
@@ -142,11 +137,15 @@ class Connection implements ConnectionContract
 
 
         $this->connected = true;
-        // what to do about this
-        //$this->natsCon->subscribe($this->ackSubject, function($message) { $this->processAck($message);});
     }
 
 
+    /**
+     * Publish message
+     *
+     * @param $subject
+     * @param $data
+     */
     public function publish($subject, $data)
     {
 
@@ -179,16 +178,26 @@ class Connection implements ConnectionContract
         $this->pubs += 1;
     }
 
-//    public function publishAsync($subject, $data, callable $ackHander)
-//    {
-//        // TODO: Implement publishAsync() method.
-//    }
-
+    /**
+     * Subscribe
+     *
+     * @param $subjects
+     * @param callable $cb
+     * @param SubscriptionOptions $subscriptionOptions
+     */
     public function subscribe($subjects, callable $cb, $subscriptionOptions)
     {
         $this->_subscribe($subjects, '', $cb, $subscriptionOptions);
     }
-//
+
+    /**
+     * Subscribe to queue group
+     * @param $subjects
+     * @param $qGroup
+     * @param callable $cb
+     * @param SubscriptionOptions $subscriptionOptions
+     * @return void
+     */
     public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions)
     {
         $this->_subscribe($subjects, $qGroup, $cb, $subscriptionOptions);
@@ -196,6 +205,7 @@ class Connection implements ConnectionContract
 
 
     /**
+     *
      * @param $subject
      * @param $qGroup
      * @param callable $cb
@@ -272,6 +282,8 @@ class Connection implements ConnectionContract
     }
 
     /**
+     * Callback which handles every MsgProto and finds the related callback for that message
+     *
      * @param $rawMessage Message
      */
     private function processMsg($rawMessage){
@@ -305,11 +317,19 @@ class Connection implements ConnectionContract
         }
     }
 
+    /**
+     * Number of reconnects
+     * @return int
+     */
     public function reconnectsCount()
     {
         return $this->reconnects;
     }
 
+    /**
+     * Number of publish requests
+     * @return int
+     */
     public function pubsCount()
     {
         return $this->pubs;
@@ -338,6 +358,11 @@ class Connection implements ConnectionContract
         $this->connect($this->timeout);
     }
 
+    /**
+     * Is client connected
+     *
+     * @return bool
+     */
     public function isConnected()
     {
 
@@ -348,6 +373,11 @@ class Connection implements ConnectionContract
         return $this->connected;
     }
 
+    /**
+     * Close connection
+     *
+     * @throws Exception
+     */
     public function close()
     {
 
@@ -381,11 +411,20 @@ class Connection implements ConnectionContract
         $this->natsCon->close();
     }
 
+    /**
+     * Underlying nats connection
+     *
+     * @return \Nats\Connection
+     */
     public function natsConn()
     {
         return $this->natsCon;
     }
 
+    /**
+     *
+     * Disconnect if we haven't
+     */
     public function __destruct()
     {
         if ($this->isConnected()) {
@@ -394,6 +433,10 @@ class Connection implements ConnectionContract
     }
 
     /**
+     * Send an Acknowledgement for a received message
+     *
+     * Must use if isManualAck
+     *
      * @param MsgProto $message
      * @return void
      */
@@ -406,6 +449,12 @@ class Connection implements ConnectionContract
         $this->natsCon->publish($message->ackSubject, $data);
     }
 
+    /**
+     * Wait for next n messages
+     *
+     * @param int $quantity
+     * @return \Nats\Connection
+     */
     public function wait($quantity = 0)
     {
         return $this->natsCon->wait($quantity);
