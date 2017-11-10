@@ -86,6 +86,10 @@ class Connection implements ConnectionContract
         $this->natsCon = new \Nats\Connection($this->options->getNatsOptions());
     }
 
+    private function msgIsEmpty($data) {
+        return $data === "\r\n";
+    }
+
     /**
      * @param null $timeout
      * @throws Exception
@@ -250,7 +254,7 @@ class Connection implements ConnectionContract
              * @var $message Message
              */
 
-            if ($message->getBody() !== "\r\n") {
+            if (!$this->msgIsEmpty($message->getBody())) {
                 $resp = CloseResponse::fromStream($message->getBody());
             }
         });
