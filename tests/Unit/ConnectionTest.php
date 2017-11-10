@@ -84,6 +84,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $called = true;
         }, $subOptions);
 
+        $this->c->publish('test.subscribe', 'foobar');
+
         $this->c->wait(1);
 
         $this->assertTrue($called);

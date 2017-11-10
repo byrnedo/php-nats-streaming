@@ -282,7 +282,7 @@ class Connection implements ConnectionContract
         /**
          * @var $sub Subscription
          */
-        $sub = $this->subMap[$message->getSubject()];
+        $sub = @$this->subMap[$rawMessage->getSubject()];
 
 
         if ($sub == null) {
