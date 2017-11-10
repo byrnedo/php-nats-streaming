@@ -11,6 +11,7 @@ use pb\CloseRequest;
 use pb\CloseResponse;
 use pb\ConnectRequest;
 use pb\ConnectResponse;
+use pb\MsgProto;
 use pb\PubMsg;
 use RandomLib\Factory;
 
@@ -48,7 +49,7 @@ class Connection implements ConnectionContract
 //    private $ackSubscription;
 //    private $hbSubscription;
 
-    //private $subscriptions = [];
+    private $subMap = [];
 
     //private $pubAckMap = [];
 
@@ -179,16 +180,80 @@ class Connection implements ConnectionContract
 //        // TODO: Implement publishAsync() method.
 //    }
 
-//    public function subscribe($subjects, callable $cb, $subscriptionOptions)
-//    {
-//        // TODO: Implement subscribe() method.
-//    }
+    public function subscribe($subjects, callable $cb, $subscriptionOptions)
+    {
+        /*
+         *
+         * sub := &subscription{subject: subject, qgroup: qgroup, inbox: nats.NewInbox(), cb: cb, sc: sc, opts: DefaultSubscriptionOptions}
+         */
+
+
+    }
 //
 //    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions)
 //    {
 //        // TODO: Implement queueSubscribe() method.
 //    }
 
+
+    /**
+     * @param $subject
+     * @param $qGroup
+     * @param callable $cb
+     * @param SubscriptionOptions $subscriptionOptions
+     */
+    private function _subscribe($subject, $qGroup, callable $cb, $subscriptionOptions)
+    {
+        $inbox = uniqid('_INBOX.');
+        $sub = new Subscription([
+            'subject' => $subject,
+            'qGroup' => $qGroup,
+            'inbox' => $inbox,
+            'opts' => $subscriptionOptions,
+            'cb' => $cb
+        ]);
+        $this->subMap[$sub->getInbox()] = $sub;
+        $this->natsCon->subscribe($sub->getInbox(), function($message){$this->processMsg($message);});
+
+
+
+
+    }
+
+    /**
+     * @param $rawMessage Message
+     */
+    private function processMsg($rawMessage){
+
+        $message = MsgProto::fromStream($rawMessage->getBody());
+
+
+        /**
+         * @var $sub Subscription
+         */
+        $sub = $this->subMap[$message->getSubject()];
+
+
+        if ($sub == null) {
+            return;
+        }
+
+        $ackSubject = $sub->getAckInbox();
+        $isManualAck = $sub->getOpts()->isManualAck();
+        $cb = $sub->getCb();
+        if ($cb != null) {
+            $cb($message);
+        }
+
+        if (!$isManualAck) {
+           $req = new Ack();
+           $req->setSubject($message->getSubject());
+           $req->setSequence($message->getSequence());
+           $data = $req->toStream()->getContents();
+
+           $this->natsCon->publish($ackSubject, $data);
+        }
+    }
 
     public function reconnectsCount()
     {
