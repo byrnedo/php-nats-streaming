@@ -2,7 +2,8 @@
 
 namespace NatsStreaming\Contracts;
 
-interface ConnectionContract {
+interface ConnectionContract
+{
 
 
     public function publish($subject, $data);
@@ -13,11 +14,11 @@ interface ConnectionContract {
 //
 //    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions);
 
-    public function disconnect();
+    public function connect();
+    public function close();
 
     // NatsConn returns the underlying NATS conn. Use this with care. For
     // example, closing the wrapped NATS conn will put the NATS Streaming Conn
     // in an invalid state.
     public function natsConn();
-
 }

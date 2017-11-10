@@ -45,5 +45,4 @@ class Exception extends \Exception
     {
         return new static(sprintf('Failed to disconnect: %s', $response));
     }
-
 }

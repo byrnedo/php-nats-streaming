@@ -31,7 +31,8 @@
     ],
     "autoload": {
         "psr-4": {
-            "pb\\":"gen/pb"
+            "pb\\":"gen/pb",
+            "NatsStreaming\\": "src/NatsStreaming"
         }
     }
 }
