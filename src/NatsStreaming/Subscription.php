@@ -30,6 +30,11 @@ class Subscription
     private $opts = null;
     private $cb = null;
 
+    /**
+     * @var string
+     */
+    private $sid = '';
+
     private $fillable = [
         'subject',
         'qGroup',
@@ -151,6 +156,24 @@ class Subscription
     public function getCb()
     {
         return $this->cb;
+    }
+
+    /**
+     * @param string $sid
+     * @return Subscription
+     */
+    public function setSid($sid)
+    {
+        $this->sid = $sid;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSid()
+    {
+        return $this->sid;
     }
 
 }

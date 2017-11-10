@@ -45,4 +45,16 @@ class Exception extends \Exception
     {
         return new static(sprintf('Failed to disconnect: %s', $response));
     }
+
+    public static function forFailedSubscription($response)
+    {
+        return new static(sprintf('Failed to subscribe: %s', $response));
+    }
+
+
+    public static function forTimeout($response)
+    {
+
+        return new static(sprintf('Possible timeout: %s', $response));
+    }
 }

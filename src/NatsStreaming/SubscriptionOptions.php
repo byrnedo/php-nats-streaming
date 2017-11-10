@@ -30,7 +30,7 @@ class SubscriptionOptions
     * 30seconds
      * @var int
      */
-    private $ackWaitMs = 30000;
+    private $ackWaitSecs = 30000;
 
     /**
      * @var StartPosition
@@ -43,9 +43,9 @@ class SubscriptionOptions
     private $startSequence = 0;
 
     /**
-     * @var DateTime
+     * @var int
      */
-    private $startTime = null;
+    private $startMicroTime = 0;
 
     /**
      * @var bool
@@ -109,18 +109,18 @@ class SubscriptionOptions
     /**
      * @return int
      */
-    public function getAckWaitMs()
+    public function getAckWaitSecs()
     {
-        return $this->ackWaitMs;
+        return $this->ackWaitSecs;
     }
 
     /**
-     * @param int $ackWaitMs
+     * @param int $ackWaitSecs
      * @return $this
      */
-    public function setAckWaitMs($ackWaitMs)
+    public function setAckWaitSecs($ackWaitSecs)
     {
-        $this->ackWaitMs = $ackWaitMs;
+        $this->ackWaitSecs = $ackWaitSecs;
 
         return $this;
     }
@@ -162,20 +162,20 @@ class SubscriptionOptions
     }
 
     /**
-     * @return DateTime
+     * @return int
      */
-    public function getStartTime()
+    public function getStartMicroTime()
     {
-        return $this->startTime;
+        return $this->startMicroTime;
     }
 
     /**
-     * @param DateTime $startTime
+     * @param DateTime $startMicroTime
      * @return $this
      */
-    public function setStartTime($startTime)
+    public function setStartMicroTime($startMicroTime)
     {
-        $this->startTime = $startTime;
+        $this->startMicroTime = $startMicroTime;
         return $this;
     }
 

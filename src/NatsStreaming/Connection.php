@@ -3,6 +3,7 @@
 
 namespace NatsStreaming;
 
+use DateTime;
 use Nats\Message;
 use Nats\Php71RandomGenerator;
 use NatsStreaming\Contracts\ConnectionContract;
@@ -13,6 +14,9 @@ use pb\ConnectRequest;
 use pb\ConnectResponse;
 use pb\MsgProto;
 use pb\PubMsg;
+use pb\StartPosition;
+use pb\SubscriptionRequest;
+use pb\SubscriptionResponse;
 use RandomLib\Factory;
 
 class Connection implements ConnectionContract
@@ -201,6 +205,8 @@ class Connection implements ConnectionContract
      * @param $qGroup
      * @param callable $cb
      * @param SubscriptionOptions $subscriptionOptions
+     * @throws Exception
+     * @throws \Exception
      */
     private function _subscribe($subject, $qGroup, callable $cb, $subscriptionOptions)
     {
@@ -213,8 +219,57 @@ class Connection implements ConnectionContract
             'cb' => $cb
         ]);
         $this->subMap[$sub->getInbox()] = $sub;
-        $this->natsCon->subscribe($sub->getInbox(), function($message){$this->processMsg($message);});
+        $sid = $this->natsCon->subscribe($sub->getInbox(), function($message){$this->processMsg($message);});
 
+        $sub->setSid($sid);
+        $this->subMap[$sub->getInbox()] = $sub;
+
+
+        $req = new SubscriptionRequest();
+        $req->setSubject($sub->getSubject());
+        $req->setClientID($this->options->getClientID());
+        $req->setAckWaitInSecs($subscriptionOptions->getAckWaitSecs());
+        $req->setDurableName($subscriptionOptions->getDurableName());
+        $req->setInbox($sub->getInbox());
+        $req->setStartPosition($subscriptionOptions->getStartAt());
+
+        switch ($req->getStartPosition()->value()) {
+            case StartPosition::SequenceStart_VALUE:
+                $req->setStartSequence($subscriptionOptions->getStartSequence());
+                break;
+            case StartPosition::TimeDeltaStart_VALUE:
+                $nowNano = microtime() * 1000;
+                $req->setStartTimeDelta( $nowNano - $subscriptionOptions->getStartMicroTime() * 1000);
+                break;
+        }
+
+        $data = $req->toStream()->getContents();
+        /**
+         * @var $resp SubscriptionResponse
+         */
+        $resp = null;
+        try {
+
+            $this->natsCon->request($this->subRequests, $data, function($message) use (&$resp) {
+                $resp = SubscriptionResponse::fromStream($message->getBody());
+            });
+        } catch (\Exception $e) {
+            $this->natsCon->unsubscribe($sid);
+            throw $e;
+        }
+
+        if (!$resp) {
+            $this->natsCon->unsubscribe($sid);
+            throw Exception::forTimeout('no response for subscribe request');
+        }
+
+        if ($resp->getError()) {
+            $this->natsCon->unsubscribe($sid);
+            throw Exception::forFailedSubscription($resp->getError());
+        }
+
+
+        $sub->setAckInbox($resp->getAckInbox());
 
 
 
@@ -239,6 +294,10 @@ class Connection implements ConnectionContract
         }
 
         $ackSubject = $sub->getAckInbox();
+
+        // smuggle ack subject
+        $message->ackSubject = $ackSubject;
+
         $isManualAck = $sub->getOpts()->isManualAck();
         $cb = $sub->getCb();
         if ($cb != null) {
@@ -246,12 +305,7 @@ class Connection implements ConnectionContract
         }
 
         if (!$isManualAck) {
-           $req = new Ack();
-           $req->setSubject($message->getSubject());
-           $req->setSequence($message->getSequence());
-           $data = $req->toStream()->getContents();
-
-           $this->natsCon->publish($ackSubject, $data);
+            $this->ack($message);
         }
     }
 
@@ -341,5 +395,18 @@ class Connection implements ConnectionContract
         if ($this->isConnected()) {
             $this->close();
         }
+    }
+
+    /**
+     * @param MsgProto $message
+     * @return void
+     */
+    public function ack($message)
+    {
+        $req = new Ack();
+        $req->setSubject($message->getSubject());
+        $req->setSequence($message->getSequence());
+        $data = $req->toStream()->getContents();
+        $this->natsCon->publish($message->ackSubject, $data);
     }
 }

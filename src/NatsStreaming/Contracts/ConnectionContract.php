@@ -2,17 +2,37 @@
 
 namespace NatsStreaming\Contracts;
 
+use NatsStreaming\SubscriptionOptions;
+use pb\MsgProto;
+
 interface ConnectionContract
 {
 
 
+    /**
+     * @param $subject
+     * @param $data
+     * @return void
+     */
     public function publish($subject, $data);
 
     //public function publishAsync($subject, $data, callable $ackHander);
 
-    public function subscribe($subjects, callable $cb, $subscriptionOptions);
+    /**
+     * @param $subject
+     * @param callable $cb
+     * @param SubscriptionOptions $subscriptionOptions
+     * @return void
+     */
+    public function subscribe($subject, callable $cb, $subscriptionOptions);
 //
-//    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions);
+//    public function queueSubscribe($subject, $qGroup, callable $cb, $subscriptionOptions);
+
+    /**
+     * @param MsgProto $message
+     * @return mixed
+     */
+    public function ack($message);
 
     public function connect();
     public function close();
