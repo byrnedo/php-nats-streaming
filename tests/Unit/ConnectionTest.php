@@ -76,20 +76,20 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     /**
      * Test Subscribe Command
      */
-    public function testSubscribe(){
+    public function testSubscribe()
+    {
         $this->c->connect();
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
         $got = 0;
-        $this->c->subscribe('test.subscribe', function($message) use (&$got){
+        $this->c->subscribe('test.subscribe', function ($message) use (&$got) {
             $got ++;
         }, $subOptions);
 
 
 
         for ($i = 0; $i < 10; $i++) {
-
             $this->c->publish('test.subscribe', 'foobar');
         }
 

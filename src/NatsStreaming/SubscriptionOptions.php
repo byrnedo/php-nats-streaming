@@ -8,7 +8,6 @@
 
 namespace NatsStreaming;
 
-
 use DateTime;
 use pb\StartPosition;
 
@@ -199,5 +198,4 @@ class SubscriptionOptions
         $this->startMicroTime = $startMicroTime;
         return $this;
     }
-
 }

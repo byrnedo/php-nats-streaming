@@ -2,7 +2,6 @@
 
 namespace NatsStreaming;
 
-
 use Traversable;
 
 trait Fillable
@@ -37,5 +36,4 @@ trait Fillable
             }
         }
     }
-
 }

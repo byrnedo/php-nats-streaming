@@ -84,7 +84,8 @@ class Connection implements ConnectionContract
         $this->natsCon = new \Nats\Connection($this->options->getNatsOptions());
     }
 
-    private function msgIsEmpty($data) {
+    private function msgIsEmpty($data)
+    {
         return $data === "\r\n";
     }
 
@@ -224,7 +225,9 @@ class Connection implements ConnectionContract
             'cb' => $cb
         ]);
         $this->subMap[$sub->getInbox()] = $sub;
-        $sid = $this->natsCon->subscribe($sub->getInbox(), function($message){$this->processMsg($message);});
+        $sid = $this->natsCon->subscribe($sub->getInbox(), function ($message) {
+            $this->processMsg($message);
+        });
 
         $sub->setSid($sid);
         $this->subMap[$sub->getInbox()] = $sub;
@@ -245,7 +248,7 @@ class Connection implements ConnectionContract
                 break;
             case StartPosition::TimeDeltaStart_VALUE:
                 $nowNano = microtime() * 1000;
-                $req->setStartTimeDelta( $nowNano - $subscriptionOptions->getStartMicroTime() * 1000);
+                $req->setStartTimeDelta($nowNano - $subscriptionOptions->getStartMicroTime() * 1000);
                 break;
         }
 
@@ -255,8 +258,7 @@ class Connection implements ConnectionContract
          */
         $resp = null;
         try {
-
-            $this->natsCon->request($this->subRequests, $data, function($message) use (&$resp) {
+            $this->natsCon->request($this->subRequests, $data, function ($message) use (&$resp) {
                 $resp = SubscriptionResponse::fromStream($message->getBody());
             });
         } catch (\Exception $e) {
@@ -276,9 +278,6 @@ class Connection implements ConnectionContract
 
 
         $sub->setAckInbox($resp->getAckInbox());
-
-
-
     }
 
     /**
@@ -286,7 +285,8 @@ class Connection implements ConnectionContract
      *
      * @param $rawMessage Message
      */
-    private function processMsg($rawMessage){
+    private function processMsg($rawMessage)
+    {
 
         $message = MsgProto::fromStream($rawMessage->getBody());
 

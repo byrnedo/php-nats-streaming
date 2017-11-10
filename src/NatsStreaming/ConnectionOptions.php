@@ -4,7 +4,8 @@ namespace NatsStreaming;
 
 use Traversable;
 
-class ConnectionOptions {
+class ConnectionOptions
+{
 
     use Fillable;
     //public $ackTimeout;
@@ -72,12 +73,14 @@ class ConnectionOptions {
      * @param $discoverPrefix
      * @return $this
      */
-    public function setDiscoverPrefix($discoverPrefix){
+    public function setDiscoverPrefix($discoverPrefix)
+    {
         $this->discoverPrefix = $discoverPrefix;
         return $this;
     }
 
-    public function getDiscoverPrefix(){
+    public function getDiscoverPrefix()
+    {
         return $this->discoverPrefix;
     }
 
@@ -134,6 +137,4 @@ class ConnectionOptions {
     {
         return $this->clientID;
     }
-
-
 }

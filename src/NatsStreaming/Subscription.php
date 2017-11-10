@@ -2,7 +2,6 @@
 
 namespace NatsStreaming;
 
-
 class Subscription
 {
 
@@ -175,5 +174,4 @@ class Subscription
     {
         return $this->sid;
     }
-
 }
