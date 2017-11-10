@@ -64,10 +64,28 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
      */
     public function testReconnect()
     {
+        $this->c->connect();
+        $this->assertTrue($this->c->isConnected());
         $this->c->reconnect();
         $count = $this->c->reconnectsCount();
         $this->assertInternalType('int', $count);
         $this->assertGreaterThan(0, $count);
         $this->c->close();
+    }
+
+    public function testSubscribe(){
+        $this->c->connect();
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+        $called = false;
+        $this->c->subscribe('test.subscribe', function($message) use (&$called){
+
+            $called = true;
+        }, $subOptions);
+
+        $this->c->wait(1);
+
+        $this->assertTrue($called);
     }
 }

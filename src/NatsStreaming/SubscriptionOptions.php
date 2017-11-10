@@ -30,7 +30,7 @@ class SubscriptionOptions
     * 30seconds
      * @var int
      */
-    private $ackWaitSecs = 30000;
+    private $ackWaitSecs = 30;
 
     /**
      * @var StartPosition
@@ -51,6 +51,27 @@ class SubscriptionOptions
      * @var bool
      */
     private $manualAck = false;
+
+    private $fillable = [
+       'durableName',
+       'maxInFlight',
+       'ackWaitSecs',
+       'startAt',
+       'startSequence',
+       'startMicroTime',
+       'manualAck',
+    ];
+
+    public function __construct($options = null)
+    {
+        if (empty($options) === false) {
+            $this->initialize($options);
+        }
+
+        if ($this->getStartAt() == null) {
+            $this->setStartAt(StartPosition::NewOnly());
+        }
+    }
 
     /**
      * @param bool $manualAck

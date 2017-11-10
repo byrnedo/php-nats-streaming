@@ -34,6 +34,8 @@ interface ConnectionContract
      */
     public function ack($message);
 
+    public function wait($quantity = 0);
+
     public function connect();
     public function close();
 

@@ -186,12 +186,7 @@ class Connection implements ConnectionContract
 
     public function subscribe($subjects, callable $cb, $subscriptionOptions)
     {
-        /*
-         *
-         * sub := &subscription{subject: subject, qgroup: qgroup, inbox: nats.NewInbox(), cb: cb, sc: sc, opts: DefaultSubscriptionOptions}
-         */
-
-
+        $this->_subscribe($subjects, '', $cb, $subscriptionOptions);
     }
 //
 //    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions)
@@ -229,6 +224,7 @@ class Connection implements ConnectionContract
         $req->setSubject($sub->getSubject());
         $req->setClientID($this->options->getClientID());
         $req->setAckWaitInSecs($subscriptionOptions->getAckWaitSecs());
+        $req->setMaxInFlight($subscriptionOptions->getMaxInFlight());
         $req->setDurableName($subscriptionOptions->getDurableName());
         $req->setInbox($sub->getInbox());
         $req->setStartPosition($subscriptionOptions->getStartAt());
@@ -408,5 +404,10 @@ class Connection implements ConnectionContract
         $req->setSequence($message->getSequence());
         $data = $req->toStream()->getContents();
         $this->natsCon->publish($message->ackSubject, $data);
+    }
+
+    public function wait($quantity = 0)
+    {
+        return $this->natsCon->wait($quantity);
     }
 }
