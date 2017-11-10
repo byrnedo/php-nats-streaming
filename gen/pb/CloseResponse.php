@@ -186,6 +186,7 @@ class CloseResponse extends \Protobuf\AbstractMessage
             }
 
             if ($tag === 1) {
+                error_log($wire);
                 \Protobuf\WireFormat::assertWireType($wire, 9);
 
                 $this->error = $reader->readString($stream);

@@ -1,5 +1,4 @@
 <?php
-namespace NatsStreaming\tests\Unit;
 
 use NatsStreaming\Connection;
 use NatsStreaming\ConnectionOptions;
@@ -23,6 +22,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $options = new ConnectionOptions();
+        $options->setClientID("test");
+        $options->setClusterID("test-cluster");
         $this->c = new Connection($options);
         $this->c->connect();
     }

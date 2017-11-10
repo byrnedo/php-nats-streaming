@@ -6,11 +6,11 @@ namespace NatsStreaming;
 use Nats\Message;
 use Nats\Php71RandomGenerator;
 use NatsStreaming\Contracts\ConnectionContract;
+use pb\Ack;
 use pb\CloseRequest;
 use pb\CloseResponse;
 use pb\ConnectRequest;
 use pb\ConnectResponse;
-use pb\PubAck;
 use pb\PubMsg;
 use RandomLib\Factory;
 
@@ -26,9 +26,6 @@ class Connection implements ConnectionContract
      */
     public $options;
 
-    private $stanClusterID;
-
-    private $clientID;
 
     /**
      * @var \RandomLib\Generator
@@ -74,8 +71,10 @@ class Connection implements ConnectionContract
     {
 
         if ($options === null) {
-            $this->options = new ConnectionOptions();
+            $options = new ConnectionOptions();
         }
+
+        $this->options  = $options;
 
         if (version_compare(phpversion(), '7.0', '>') === true) {
             $this->randomGenerator = new Php71RandomGenerator();
@@ -84,7 +83,7 @@ class Connection implements ConnectionContract
             $this->randomGenerator = $randomFactory->getLowStrengthGenerator();
         }
 
-        $this->natsCon = new \Nats\Connection($this->options);
+        $this->natsCon = new \Nats\Connection($this->options->getNatsOptions());
     }
 
     /**
@@ -96,18 +95,17 @@ class Connection implements ConnectionContract
 
         $this->natsCon->connect($timeout);
 
-
         $this->timeout      = $timeout;
         $hbInbox = $this->randomGenerator->generateString(self::UID_LENGTH);
 
         //$this->natsCon->subscribe($hbInbox, function($message) { $this->processHeartbeat($message);});
 
-        $discoverPrefix = $this->options->discoverPrefix ? $this->options->discoverPrefix : self::DEFAULT_DISCOVER_PREFIX;
+        $discoverPrefix = $this->options->getDiscoverPrefix() ? $this->options->getDiscoverPrefix() : self::DEFAULT_DISCOVER_PREFIX;
 
-        $discoverSubject = $discoverPrefix . '.' . $this->stanClusterID;
+        $discoverSubject = $discoverPrefix . '.' . $this->options->getClusterID();
 
         $req = new ConnectRequest();
-        $req->setClientID($this->clientID);
+        $req->setClientID($this->options->getClientID());
         $req->setHeartbeatInbox($hbInbox);
 
         $data = $req->toStream()->getContents();
@@ -115,10 +113,11 @@ class Connection implements ConnectionContract
          * @var $resp ConnectResponse
          */
         $resp = null;
-        $this->natsCon->setStreamTimeout($timeout);
+
         $this->natsCon->request($discoverSubject, $data, function ($message) use (&$resp) {
             $resp = ConnectResponse::fromStream($message->getBody());
         });
+
 
         if ($resp->getError()) {
             $this->close();
@@ -146,7 +145,7 @@ class Connection implements ConnectionContract
         $peGUID = $this->randomGenerator->generateString(self::UID_LENGTH);
 
         $req = new PubMsg();
-        $req->setClientID($this->clientID);
+        $req->setClientID($this->options->getClientID());
         $req->setGuid($peGUID);
         $req->setSubject($subject);
         $req->setData($data);
@@ -162,11 +161,10 @@ class Connection implements ConnectionContract
                  * @var $message Message
                  */
 
-                $resp = PubAck::fromStream($message->getBody());
+                error_log($message->getBody());
 
-                if ($resp->getError()) {
-                    throw Exception::forFailedAck($resp->getError());
-                }
+                //$resp = Ack::fromStream($message->getBody());
+
             }
         );
         $this->natsCon->unsubscribe($sid, 1);
@@ -231,27 +229,26 @@ class Connection implements ConnectionContract
             $this->connected = false;
         }
 
-        return false;
+        return $this->connected;
     }
 
     public function close()
     {
 
-        $this->connected = false;
-        if (!$this->closeRequests || !$this->clientID) {
+        if (!$this->closeRequests || !$this->options->getClientID() || !$this->connected) {
+            $this->connected = false;
             return;
         }
+        $this->connected = false;
 
         $req = new CloseRequest();
-
-        $req->setClientID($this->clientID);
-
+        $req->setClientID($this->options->getClientID());
         /**
          * @var $resp CloseResponse
          */
         $resp = null;
-
-        $this->natsCon->request($this->closeRequests, $req->toStream()->getContents(), function (&$message) use (&$resp) {
+        $reqBody  = $req->toStream()->getContents();
+        $this->natsCon->request($this->closeRequests, $reqBody, function ($message) use (&$resp) {
             /**
              * @var $message Message
              */
@@ -268,5 +265,12 @@ class Connection implements ConnectionContract
     public function natsConn()
     {
         return $this->natsCon;
+    }
+
+    public function __destruct()
+    {
+        if ($this->isConnected()) {
+            $this->close();
+        }
     }
 }
