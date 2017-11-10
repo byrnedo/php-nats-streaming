@@ -161,10 +161,7 @@ class Connection implements ConnectionContract
                  * @var $message Message
                  */
 
-                error_log($message->getBody());
-
                 //$resp = Ack::fromStream($message->getBody());
-
             }
         );
         $this->natsCon->unsubscribe($sid, 1);
@@ -252,10 +249,13 @@ class Connection implements ConnectionContract
             /**
              * @var $message Message
              */
-            $resp = CloseResponse::fromStream($message->getBody());
+
+            if ($message->getBody() !== "\r\n") {
+                $resp = CloseResponse::fromStream($message->getBody());
+            }
         });
 
-        if ($resp->getError()) {
+        if ($resp && $resp->getError()) {
             throw Exception::forFailedDisconnection($resp->getError());
         }
 

@@ -25,7 +25,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $options->setClientID("test");
         $options->setClusterID("test-cluster");
         $this->c = new Connection($options);
-        $this->c->connect();
+        //$this->c->connect();
     }
     /**
      * Test Connection.
@@ -49,6 +49,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
      */
     public function testPublish()
     {
+        $this->c->connect();
         $this->c->publish('foo', 'bar');
         $count = $this->c->pubsCount();
         $this->assertInternalType('int', $count);
