@@ -25,8 +25,15 @@ interface ConnectionContract
      * @return void
      */
     public function subscribe($subject, callable $cb, $subscriptionOptions);
-//
-//    public function queueSubscribe($subject, $qGroup, callable $cb, $subscriptionOptions);
+
+    /**
+     * @param $subject
+     * @param $qGroup
+     * @param callable $cb
+     * @param SubscriptionOptions $subscriptionOptions
+     * @return mixed
+     */
+    public function queueSubscribe($subject, $qGroup, callable $cb, $subscriptionOptions);
 
     /**
      * @param MsgProto $message

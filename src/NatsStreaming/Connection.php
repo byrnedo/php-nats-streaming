@@ -189,10 +189,10 @@ class Connection implements ConnectionContract
         $this->_subscribe($subjects, '', $cb, $subscriptionOptions);
     }
 //
-//    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions)
-//    {
-//        // TODO: Implement queueSubscribe() method.
-//    }
+    public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions)
+    {
+        $this->_subscribe($subjects, $qGroup, $cb, $subscriptionOptions);
+    }
 
 
     /**

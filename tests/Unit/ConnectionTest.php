@@ -78,16 +78,22 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
-        $called = false;
-        $this->c->subscribe('test.subscribe', function($message) use (&$called){
+        $got = 0;
+        $this->c->subscribe('test.subscribe', function($message) use (&$got){
 
-            $called = true;
+            $got ++;
         }, $subOptions);
 
-        $this->c->publish('test.subscribe', 'foobar');
 
-        $this->c->wait(1);
 
-        $this->assertTrue($called);
+        for ($i = 0; $i < 10; $i++) {
+
+            $this->c->publish('test.subscribe', 'foobar');
+        }
+
+
+        $this->c->wait(10);
+
+        $this->assertEquals(10, $got);
     }
 }
