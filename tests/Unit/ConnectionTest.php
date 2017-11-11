@@ -142,6 +142,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test unsubscribing from channel
+     * @param bool $close
      */
     public function testUnsubscribe($close = false){
 

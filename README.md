@@ -50,22 +50,42 @@ $subOptions = new \NatsStreaming\SubscriptionOptions();
 
 $subOptions->setStartAt(\NatsStreamingProtos\StartPosition::First());
 
-$c->subscribe('special.subject', function ($message) {
+$sub = $c->subscribe('special.subject', function ($message) {
     // implement
 }, $subOptions);
 
 $c->wait(1);
+
+
+$sub->unsubscribe(); // or $sub->close();
 
 
 // Queue Subscribe
 
 $subOptions = new \NatsStreaming\SubscriptionOptions();
 
-$c->queueSubscribe('specialer.subject', 'workgroup', function ($message) {
+$sub = $c->queueSubscribe('specialer.subject', 'workgroup', function ($message) {
     // implement
 }, $subOptions);
 
+
 $c->wait(1);
+
+$sub->close(); // or $sub->unsubscribe();
+
+
+// Manual Ack
+
+$subOptions = new \NatsStreaming\SubscriptionOptions();
+
+$subOptions->setManualAck(true);
+
+$sub = $c->subscribe('special.subject', function ($message) {
+    $message->ack();
+}, $subOptions);
+
+$c->wait(1);
+
 ```
 
 ## License
