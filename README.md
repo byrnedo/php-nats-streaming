@@ -33,8 +33,8 @@ php composer.phar require byrnedo/nats-streaming-server:dev-master
 
 ## Usage
 
+### Publish
 ```php
-// Connect
 $options = new \NatsStreaming\ConnectionOptions();
 $options->setClientID("test");
 $options->setClusterID("test-cluster");
@@ -43,12 +43,16 @@ $c = new \NatsStreaming\Connection($options);
 // Publish
 $c->publish('special.subject', 'some serialized payload...');
 
+$c->close();
 
-// Subscribe
-
+```
+### Subscribe
+```php
 $subOptions = new \NatsStreaming\SubscriptionOptions();
 
 $subOptions->setStartAt(\NatsStreamingProtos\StartPosition::First());
+
+$c = new \NatsStreaming\Connection($options);
 
 $sub = $c->subscribe('special.subject', function ($message) {
     // implement
@@ -57,12 +61,17 @@ $sub = $c->subscribe('special.subject', function ($message) {
 $c->wait(1);
 
 
+// not explicitly needed
 $sub->unsubscribe(); // or $sub->close();
 
+$c->close();
 
-// Queue Subscribe
-
+```
+### Queue Group Subscribe
+```php
 $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+$c = new \NatsStreaming\Connection($options);
 
 $sub = $c->queueSubscribe('specialer.subject', 'workgroup', function ($message) {
     // implement
@@ -71,20 +80,29 @@ $sub = $c->queueSubscribe('specialer.subject', 'workgroup', function ($message) 
 
 $c->wait(1);
 
+// not explicitly needed
 $sub->close(); // or $sub->unsubscribe();
 
+$c->close();
 
-// Manual Ack
+```
+
+### Manual Ack
+```php
 
 $subOptions = new \NatsStreaming\SubscriptionOptions();
 
 $subOptions->setManualAck(true);
+
+$c = new \NatsStreaming\Connection($options);
 
 $sub = $c->subscribe('special.subject', function ($message) {
     $message->ack();
 }, $subOptions);
 
 $c->wait(1);
+
+$c->close();
 
 ```
 
