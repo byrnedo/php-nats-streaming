@@ -101,11 +101,41 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $got ++;
         }, $subOptions);
 
+        $this->c->wait(10);
 
+        $this->assertEquals(10, $got);
 
+        $this->c->close();
+    }
+
+    /**
+     * Test Queue Group Subscriptions
+     */
+    public function testQueueGroupSubscribe(){
+
+        $this->c->connect();
+
+        $subject = 'test.subscribe.qgroup';
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+        $got = 0;
+        $this->c->queueSubscribe($subject, 'testQueueGroup', function ($message) use (&$got) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals('foobar' . $got, $message->getData());
+            $got ++;
+        }, $subOptions);
+
+        for ($i = 0; $i < 10; $i++) {
+            $this->c->publish($subject, 'foobar' . $i);
+        }
 
         $this->c->wait(10);
 
         $this->assertEquals(10, $got);
+
+        $this->c->close();
     }
 }
