@@ -2,6 +2,7 @@
 
 use NatsStreaming\Connection;
 use NatsStreaming\ConnectionOptions;
+use pb\MsgProto;
 
 /**
  * Class ConnectionTest.
@@ -84,7 +85,10 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $got = 0;
         $this->c->subscribe('test.subscribe', function ($message) use (&$got) {
-            $this->assertEquals('foobar' . $got, $message->getBody());
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals('foobar' . $got, $message->getData());
             $got ++;
         }, $subOptions);
 
