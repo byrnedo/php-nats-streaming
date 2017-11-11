@@ -84,13 +84,14 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $got = 0;
         $this->c->subscribe('test.subscribe', function ($message) use (&$got) {
+            $this->assertEquals('foobar' . $got, $message->getBody());
             $got ++;
         }, $subOptions);
 
 
 
         for ($i = 0; $i < 10; $i++) {
-            $this->c->publish('test.subscribe', 'foobar');
+            $this->c->publish('test.subscribe', 'foobar' . $i);
         }
 
 
