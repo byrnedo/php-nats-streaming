@@ -35,10 +35,10 @@ php composer.phar require byrnedo/nats-streaming-server:dev-master
 
 ```php
 // Connect
-$options = new ConnectionOptions();
+$options = new \NatsStreaming\ConnectionOptions();
 $options->setClientID("test");
 $options->setClusterID("test-cluster");
-$c = new Connection($options);
+$c = new \NatsStreaming\Connection($options);
 
 // Publish
 $c->publish('special.subject', 'some serialized payload...');
@@ -48,7 +48,7 @@ $c->publish('special.subject', 'some serialized payload...');
 
 $subOptions = new \NatsStreaming\SubscriptionOptions();
 
-$subOptions->setStartAt(\pb\StartPosition::First());
+$subOptions->setStartAt(\NatsStreamingProtos\StartPosition::First());
 
 $c->subscribe('special.subject', function ($message) {
     // implement

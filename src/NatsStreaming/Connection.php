@@ -6,16 +6,16 @@ namespace NatsStreaming;
 use Nats\Message;
 use Nats\Php71RandomGenerator;
 use NatsStreaming\Contracts\ConnectionContract;
-use pb\Ack;
-use pb\CloseRequest;
-use pb\CloseResponse;
-use pb\ConnectRequest;
-use pb\ConnectResponse;
-use pb\MsgProto;
-use pb\PubMsg;
-use pb\StartPosition;
-use pb\SubscriptionRequest;
-use pb\SubscriptionResponse;
+use NatsStreamingProtos\Ack;
+use NatsStreamingProtos\CloseRequest;
+use NatsStreamingProtos\CloseResponse;
+use NatsStreamingProtos\ConnectRequest;
+use NatsStreamingProtos\ConnectResponse;
+use NatsStreamingProtos\MsgProto;
+use NatsStreamingProtos\PubMsg;
+use NatsStreamingProtos\StartPosition;
+use NatsStreamingProtos\SubscriptionRequest;
+use NatsStreamingProtos\SubscriptionResponse;
 use RandomLib\Factory;
 
 class Connection implements ConnectionContract

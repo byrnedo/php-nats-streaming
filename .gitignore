@@ -3,4 +3,6 @@
 !/vendor/.gitkeep
 /.idea
 
+/.protocol-mod.proto
+
 /composer.phar

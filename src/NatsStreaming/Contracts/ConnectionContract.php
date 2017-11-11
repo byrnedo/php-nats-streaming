@@ -3,7 +3,7 @@
 namespace NatsStreaming\Contracts;
 
 use NatsStreaming\SubscriptionOptions;
-use pb\MsgProto;
+use NatsStreamingProtos\MsgProto;
 
 interface ConnectionContract
 {

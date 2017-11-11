@@ -2,7 +2,8 @@
 
 use NatsStreaming\Connection;
 use NatsStreaming\ConnectionOptions;
-use pb\MsgProto;
+use NatsStreamingProtos\MsgProto;
+use NatsStreamingProtos\StartPosition;
 
 /**
  * Class ConnectionTest.
@@ -85,7 +86,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
-        $subOptions->setStartAt(\pb\StartPosition::First());
+        $subOptions->setStartAt(StartPosition::First());
 
         for ($i = 0; $i < 10; $i++) {
             $this->c->publish($subject, 'foobar' . $i);

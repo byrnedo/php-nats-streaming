@@ -2,10 +2,10 @@
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 proto:
-	ln -sf $(ROOT_DIR)/vendor/protobuf-php/google-protobuf-proto/src/descriptor.proto  $(ROOT_DIR)/vendor/protobuf-php/google-protobuf-proto/src/google/protobuf/descriptor.proto 
-
-
-	php $(ROOT_DIR)/vendor/bin/protobuf --include-descriptors -i $(ROOT_DIR)/vendor -o $(ROOT_DIR)/gen/  -i $(ROOT_DIR) $(ROOT_DIR)/protocol.proto 
+	ln -sf $(ROOT_DIR)/vendor/protobuf-php/google-protobuf-proto/src/descriptor.proto  $(ROOT_DIR)/vendor/protobuf-php/google-protobuf-proto/src/google/protobuf/descriptor.proto
+	# TODO - remove
+	sed 's/^package .*/package NatsStreamingProtos;/' $(ROOT_DIR)/protocol.proto > $(ROOT_DIR)/.protocol-mod.proto
+	php $(ROOT_DIR)/vendor/bin/protobuf -vvv --include-descriptors -i $(ROOT_DIR)/vendor -o $(ROOT_DIR)/gen/  -i $(ROOT_DIR) $(ROOT_DIR)/.protocol-mod.proto
 
 cs: lint
 	./vendor/bin/phpcbf --standard=PSR2 src tests

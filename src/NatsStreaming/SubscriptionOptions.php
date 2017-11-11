@@ -1,15 +1,9 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: donal
- * Date: 2017-11-10
- * Time: 15:00
- */
 
 namespace NatsStreaming;
 
 use DateTime;
-use pb\StartPosition;
+use NatsStreamingProtos\StartPosition;
 
 class SubscriptionOptions
 {
