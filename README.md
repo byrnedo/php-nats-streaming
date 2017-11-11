@@ -51,7 +51,18 @@ $subOptions = new \NatsStreaming\SubscriptionOptions();
 $subOptions->setStartAt(\pb\StartPosition::First());
 
 $c->subscribe('special.subject', function ($message) {
-    // TODO -implement
+    // implement
+}, $subOptions);
+
+$c->wait(1);
+
+
+// Queue Subscribe
+
+$subOptions = new \NatsStreaming\SubscriptionOptions();
+
+$c->queueSubscribe('specialer.subject', 'workgroup', function ($message) {
+    // implement
 }, $subOptions);
 
 $c->wait(1);
