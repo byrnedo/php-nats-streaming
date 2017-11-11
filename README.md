@@ -1,6 +1,6 @@
 # PHP Nats Streaming Server Client
 
-**Travis**
+## Travis
 
 | Master  | Develop |
 | ------------- | ------------- |
