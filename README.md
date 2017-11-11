@@ -43,6 +43,8 @@ $options->setClientID("test");
 $options->setClusterID("test-cluster");
 $c = new \NatsStreaming\Connection($options);
 
+$c->connect();
+
 // Publish
 $c->publish('special.subject', 'some serialized payload...');
 
@@ -51,18 +53,19 @@ $c->close();
 ```
 ### Subscribe
 ```php
-$subOptions = new \NatsStreaming\SubscriptionOptions();
-
-$subOptions->setStartAt(\NatsStreamingProtos\StartPosition::First());
-
+$options = new \NatsStreaming\ConnectionOptions();
 $c = new \NatsStreaming\Connection($options);
+
+$c->connect();
+
+$subOptions = new \NatsStreaming\SubscriptionOptions();
+$subOptions->setStartAt(\NatsStreamingProtos\StartPosition::First());
 
 $sub = $c->subscribe('special.subject', function ($message) {
     // implement
 }, $subOptions);
 
 $c->wait(1);
-
 
 // not explicitly needed
 $sub->unsubscribe(); // or $sub->close();
@@ -72,10 +75,12 @@ $c->close();
 ```
 ### Queue Group Subscribe
 ```php
-$subOptions = new \NatsStreaming\SubscriptionOptions();
-
+$options = new \NatsStreaming\ConnectionOptions();
 $c = new \NatsStreaming\Connection($options);
 
+$c->connect();
+
+$subOptions = new \NatsStreaming\SubscriptionOptions();
 $sub = $c->queueSubscribe('specialer.subject', 'workgroup', function ($message) {
     // implement
 }, $subOptions);
@@ -93,11 +98,13 @@ $c->close();
 ### Manual Ack
 ```php
 
-$subOptions = new \NatsStreaming\SubscriptionOptions();
-
-$subOptions->setManualAck(true);
-
+$options = new \NatsStreaming\ConnectionOptions();
 $c = new \NatsStreaming\Connection($options);
+
+$c->connect();
+
+$subOptions = new \NatsStreaming\SubscriptionOptions();
+$subOptions->setManualAck(true);
 
 $sub = $c->subscribe('special.subject', function ($message) {
     $message->ack();
