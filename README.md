@@ -48,10 +48,16 @@ $c->publish('special.subject', 'some serialized payload...');
 
 $subOptions = new \NatsStreaming\SubscriptionOptions();
 
+$subOptions->setStartAt(\pb\StartPosition::First());
+
 $c->subscribe('special.subject', function ($message) {
     // TODO -implement
 }, $subOptions);
 
 $c->wait(1);
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE)
 

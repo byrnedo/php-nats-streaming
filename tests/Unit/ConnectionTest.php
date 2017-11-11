@@ -81,10 +81,19 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     {
         $this->c->connect();
 
+        $subject = 'test.subscribe.'.uniqid();
+
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
+        $subOptions->setStartAt(\pb\StartPosition::First());
+
+        for ($i = 0; $i < 10; $i++) {
+            $this->c->publish($subject, 'foobar' . $i);
+        }
+
+
         $got = 0;
-        $this->c->subscribe('test.subscribe', function ($message) use (&$got) {
+        $this->c->subscribe($subject, function ($message) use (&$got) {
             /**
              * @var $message MsgProto
              */
@@ -93,10 +102,6 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }, $subOptions);
 
 
-
-        for ($i = 0; $i < 10; $i++) {
-            $this->c->publish('test.subscribe', 'foobar' . $i);
-        }
 
 
         $this->c->wait(10);
