@@ -143,7 +143,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     /**
      * Test unsubscribing from channel
      */
-    public function testUnsubscribe(){
+    public function testUnsubscribe($close = false){
 
         $this->c->connect();
 
@@ -152,10 +152,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
 
+        $got = 0;
         $sub = $this->c->subscribe($subject, function ($message) use (&$got) {
             /**
              * @var $message MsgProto
              */
+            $got ++;
             $this->assertEquals('foobar', $message->getData());
         }, $subOptions);
 
@@ -163,7 +165,13 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->wait(1);
 
-        $sub->unsubscribe();
+        $this->assertEquals(1, $got);
+
+        if ($close) {
+            $sub->close();
+        } else {
+            $sub->unsubscribe();
+        }
 
         $this->c->publish($subject, 'foobar' );
 
@@ -171,5 +179,14 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->wait(1);
 
+        $this->assertEquals(1, $got);
+
+        $this->c->close();
+
+    }
+
+    public function testSubscriptionClose() {
+
+        $this->testUnsubscribe(true);
     }
 }
