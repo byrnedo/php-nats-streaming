@@ -185,10 +185,11 @@ class Connection implements ConnectionContract
      * @param $subjects
      * @param callable $cb
      * @param SubscriptionOptions $subscriptionOptions
+     * @return Subscription
      */
     public function subscribe($subjects, callable $cb, $subscriptionOptions)
     {
-        $this->_subscribe($subjects, '', $cb, $subscriptionOptions);
+        return $this->_subscribe($subjects, '', $cb, $subscriptionOptions);
     }
 
     /**
@@ -197,11 +198,11 @@ class Connection implements ConnectionContract
      * @param $qGroup
      * @param callable $cb
      * @param SubscriptionOptions $subscriptionOptions
-     * @return void
+     * @return Subscription
      */
     public function queueSubscribe($subjects, $qGroup, callable $cb, $subscriptionOptions)
     {
-        $this->_subscribe($subjects, $qGroup, $cb, $subscriptionOptions);
+        return $this->_subscribe($subjects, $qGroup, $cb, $subscriptionOptions);
     }
 
 
@@ -211,19 +212,22 @@ class Connection implements ConnectionContract
      * @param $qGroup
      * @param callable $cb
      * @param SubscriptionOptions $subscriptionOptions
+     * @return Subscription
      * @throws Exception
      * @throws \Exception
      */
     private function _subscribe($subject, $qGroup, callable $cb, $subscriptionOptions)
     {
         $inbox = uniqid('_INBOX.');
-        $sub = new Subscription([
-            'subject' => $subject,
-            'qGroup' => $qGroup,
-            'inbox' => $inbox,
-            'opts' => $subscriptionOptions,
-            'cb' => $cb
-        ]);
+        $sub = new Subscription(
+            $subject,
+            $qGroup,
+            $inbox,
+            '', // TODO - is this required??
+            $subscriptionOptions,
+            $cb,
+            $this
+        );
         $this->subMap[$sub->getInbox()] = $sub;
         $sid = $this->natsCon->subscribe($sub->getInbox(), function ($message) {
             $this->processMsg($message);
@@ -278,6 +282,7 @@ class Connection implements ConnectionContract
 
 
         $sub->setAckInbox($resp->getAckInbox());
+        return $sub;
     }
 
     /**
@@ -288,7 +293,7 @@ class Connection implements ConnectionContract
     private function processMsg($rawMessage)
     {
 
-        $message = MsgProto::fromStream($rawMessage->getBody());
+        $message = Msg::fromStream($rawMessage->getBody());
 
 
         /**
@@ -296,15 +301,12 @@ class Connection implements ConnectionContract
          */
         $sub = @$this->subMap[$rawMessage->getSubject()];
 
-
         if ($sub == null) {
             return;
         }
 
-        $ackSubject = $sub->getAckInbox();
-
         // smuggle ack subject
-        $message->ackSubject = $ackSubject;
+        $message->setSub($sub);
 
         $isManualAck = $sub->getOpts()->isManualAck();
         $cb = $sub->getCb();
@@ -313,7 +315,7 @@ class Connection implements ConnectionContract
         }
 
         if (!$isManualAck) {
-            $this->ack($message);
+            $message->ack();
         }
     }
 
@@ -333,6 +335,22 @@ class Connection implements ConnectionContract
     public function pubsCount()
     {
         return $this->pubs;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getUnsubRequests()
+    {
+        return $this->unsubRequests;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getSubCloseRequests()
+    {
+        return $this->subCloseRequests;
     }
 
 
@@ -432,22 +450,6 @@ class Connection implements ConnectionContract
         }
     }
 
-    /**
-     * Send an Acknowledgement for a received message
-     *
-     * Must use if isManualAck
-     *
-     * @param MsgProto $message
-     * @return void
-     */
-    public function ack($message)
-    {
-        $req = new Ack();
-        $req->setSubject($message->getSubject());
-        $req->setSequence($message->getSequence());
-        $data = $req->toStream()->getContents();
-        $this->natsCon->publish($message->ackSubject, $data);
-    }
 
     /**
      * Wait for next n messages

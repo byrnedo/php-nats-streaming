@@ -2,10 +2,12 @@
 
 namespace NatsStreaming;
 
+use Nats\Message;
+use NatsStreamingProtos\SubscriptionResponse;
+use NatsStreamingProtos\UnsubscribeRequest;
+
 class Subscription
 {
-
-    use Fillable;
 
     /**
      * @var string
@@ -34,20 +36,30 @@ class Subscription
      */
     private $sid = '';
 
-    private $fillable = [
-        'subject',
-        'qGroup',
-        'inbox',
-        'ackInbox',
-        'opts',
-        'cb'
-    ];
+    /**
+     * @var Connection
+     */
+    private $stanCon = null;
 
-    public function __construct($options = null)
+    /**
+     * Subscription constructor.
+     * @param $subject
+     * @param $qGroup
+     * @param $inbox
+     * @param $ackInbox
+     * @param $opts
+     * @param $cb
+     * @param $stanCon
+     */
+    public function __construct($subject, $qGroup, $inbox, $ackInbox, $opts, $cb, $stanCon)
     {
-        if (empty($options) === false) {
-            $this->initialize($options);
-        }
+        $this->subject = $subject;
+        $this->qGroup = $qGroup;
+        $this->inbox = $inbox;
+        $this->ackInbox = $ackInbox;
+        $this->opts = $opts;
+        $this->cb = $cb;
+        $this->stanCon = $stanCon;
     }
     /**
      * @param mixed $subject
@@ -173,5 +185,87 @@ class Subscription
     public function getSid()
     {
         return $this->sid;
+    }
+
+    /**
+     * Unsubscribe removes interest in the subscription.
+     * For durables, it means that the durable interest is also removed from
+     * the server. Restarting a durable with the same name will not resume
+     * the subscription, it will be considered a new one.
+     */
+    public function unsubscribe(){
+
+        $this->closeOrUnsubscribe(false);
+    }
+
+    /**
+     * Close removes this subscriber from the server, but unlike Unsubscribe(),
+     * the durable interest is not removed. If the client has connected to a server
+     * for which this feature is not available, Close() will return a ErrNoServerSupport
+     * error.
+     */
+    public function close() {
+
+        $this->closeOrUnsubscribe(true);
+
+    }
+
+    private function closeOrUnsubscribe($doClose) {
+
+        $this->stanCon->natsConn()->unsubscribe($this->sid);
+
+        $req = new UnsubscribeRequest();
+        $req->setClientID($this->stanCon->options->getClientID());
+        $req->setSubject($this->subject);
+        $req->setInbox($this->ackInbox);
+
+
+        $reqSubject = $this->stanCon->getUnsubRequests();
+
+        if ($doClose) {
+            $reqSubject = $this->stanCon->getSubCloseRequests();
+            if (!$reqSubject) {
+                throw Exception::forFailedUnsubscribe('Not supported by server');
+            }
+        }
+
+        /**
+         * @var $resp SubscriptionResponse
+         */
+        $resp = null;
+
+        $this->stanCon->natsConn()->request($reqSubject, $req->toStream()->getContents(), function($message) use (&$resp) {
+
+            /**
+             * @var $message Message
+             */
+            $resp = SubscriptionResponse::fromStream($message->getBody());
+        });
+
+        if ($resp == null) {
+            throw Exception::forTimeout('Timeout unsubscribing');
+        }
+
+        if ($resp->getError()) {
+            throw Exception::forFailedUnsubscribe($resp);
+        }
+    }
+
+    /**
+     * @param Connection $stanCon
+     * @return Subscription
+     */
+    public function setStanCon($stanCon)
+    {
+        $this->stanCon = $stanCon;
+        return $this;
+    }
+
+    /**
+     * @return Connection
+     */
+    public function getStanCon()
+    {
+        return $this->stanCon;
     }
 }

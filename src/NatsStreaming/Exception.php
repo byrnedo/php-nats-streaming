@@ -51,6 +51,11 @@ class Exception extends \Exception
         return new static(sprintf('Failed to subscribe: %s', $response));
     }
 
+    public static function forFailedUnsubscribe($response)
+    {
+        return new static(sprintf('Failed to unsubscribe: %s', $response));
+    }
+
 
     public static function forTimeout($response)
     {

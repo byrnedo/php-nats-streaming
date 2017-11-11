@@ -139,4 +139,37 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->close();
     }
+
+    /**
+     * Test unsubscribing from channel
+     */
+    public function testUnsubscribe(){
+
+        $this->c->connect();
+
+        $subject = 'test.unsub';
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+
+        $sub = $this->c->subscribe($subject, function ($message) use (&$got) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals('foobar', $message->getData());
+        }, $subOptions);
+
+        $this->c->publish($subject, 'foobar' );
+
+        $this->c->wait(1);
+
+        $sub->unsubscribe();
+
+        $this->c->publish($subject, 'foobar' );
+
+        $this->c->natsConn()->setStreamTimeout(1);
+
+        $this->c->wait(1);
+
+    }
 }

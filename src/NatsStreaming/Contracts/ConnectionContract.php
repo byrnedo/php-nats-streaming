@@ -35,12 +35,6 @@ interface ConnectionContract
      */
     public function queueSubscribe($subject, $qGroup, callable $cb, $subscriptionOptions);
 
-    /**
-     * @param MsgProto $message
-     * @return mixed
-     */
-    public function ack($message);
-
     public function wait($quantity = 0);
 
     public function connect();
