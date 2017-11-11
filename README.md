@@ -12,6 +12,9 @@
 A php client for [Nats Streaming Server](https://nats.io/documentation/streaming/nats-streaming-intro/).
 
 
+Uses [phpnats](https://github.com/repejota/phpnats) under the hood and closesly resembles it's api.
+
+
 ## Requirements
 
 * php 5.6+
