@@ -3,6 +3,8 @@
 namespace NatsStreaming;
 
 use Nats\Message;
+use NatsStreaming\Exceptions\TimeoutException;
+use NatsStreaming\Exceptions\UnsubscribeException;
 use NatsStreamingProtos\SubscriptionResponse;
 use NatsStreamingProtos\UnsubscribeRequest;
 
@@ -210,6 +212,12 @@ class Subscription
 
     }
 
+    /**
+     * @param bool $doClose
+     * @throws Exception
+     * @throws TimeoutException
+     * @throws UnsubscribeException
+     */
     private function closeOrUnsubscribe($doClose) {
 
         $this->stanCon->natsConn()->unsubscribe($this->sid);
@@ -225,7 +233,7 @@ class Subscription
         if ($doClose) {
             $reqSubject = $this->stanCon->getSubCloseRequests();
             if (!$reqSubject) {
-                throw Exception::forFailedUnsubscribe('Not supported by server');
+                throw new UnsubscribeException("not supported by server");
             }
         }
 
@@ -243,11 +251,11 @@ class Subscription
         });
 
         if ($resp == null) {
-            throw Exception::forTimeout('Timeout unsubscribing');
+            throw new TimeoutException();
         }
 
         if ($resp->getError()) {
-            throw Exception::forFailedUnsubscribe($resp);
+            throw new UnsubscribeException($resp->getError());
         }
     }
 

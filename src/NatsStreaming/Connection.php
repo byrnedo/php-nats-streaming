@@ -6,12 +6,14 @@ namespace NatsStreaming;
 use Nats\Message;
 use Nats\Php71RandomGenerator;
 use NatsStreaming\Contracts\ConnectionContract;
-use NatsStreamingProtos\Ack;
+use NatsStreaming\Exceptions\ConnectException;
+use NatsStreaming\Exceptions\DisconnectException;
+use NatsStreaming\Exceptions\SubscribeException;
+use NatsStreaming\Exceptions\TimeoutException;
 use NatsStreamingProtos\CloseRequest;
 use NatsStreamingProtos\CloseResponse;
 use NatsStreamingProtos\ConnectRequest;
 use NatsStreamingProtos\ConnectResponse;
-use NatsStreamingProtos\MsgProto;
 use NatsStreamingProtos\PubMsg;
 use NatsStreamingProtos\StartPosition;
 use NatsStreamingProtos\SubscriptionRequest;
@@ -93,7 +95,8 @@ class Connection implements ConnectionContract
      * Connect
      *
      * @param null $timeout
-     * @throws Exception
+     * @throws ConnectException
+     * @throws TimeoutException
      */
     public function connect($timeout = null)
     {
@@ -123,10 +126,14 @@ class Connection implements ConnectionContract
             $resp = ConnectResponse::fromStream($message->getBody());
         });
 
+        if (!$resp) {
+            throw new TimeoutException();
+        }
+
 
         if ($resp->getError()) {
             $this->close();
-            throw Exception::forFailedConnection($resp->getError());
+            throw new ConnectException($resp->getError());
         }
 
 
@@ -213,7 +220,8 @@ class Connection implements ConnectionContract
      * @param callable $cb
      * @param SubscriptionOptions $subscriptionOptions
      * @return Subscription
-     * @throws Exception
+     * @throws SubscribeException
+     * @throws TimeoutException
      * @throws \Exception
      */
     private function _subscribe($subject, $qGroup, callable $cb, $subscriptionOptions)
@@ -272,12 +280,12 @@ class Connection implements ConnectionContract
 
         if (!$resp) {
             $this->natsCon->unsubscribe($sid);
-            throw Exception::forTimeout('no response for subscribe request');
+            throw new TimeoutException('no response for subscribe request');
         }
 
         if ($resp->getError()) {
             $this->natsCon->unsubscribe($sid);
-            throw Exception::forFailedSubscription($resp->getError());
+            throw new SubscribeException($resp->getError());
         }
 
 
@@ -422,8 +430,9 @@ class Connection implements ConnectionContract
             }
         });
 
+
         if ($resp && $resp->getError()) {
-            throw Exception::forFailedDisconnection($resp->getError());
+            throw new DisconnectException($resp->getError());
         }
 
         $this->natsCon->close();
