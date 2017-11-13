@@ -31,7 +31,7 @@ curl -O http://getcomposer.org/composer.phar && chmod +x composer.phar
 Add php-nats-streaming as a dependency to your project
 
 ```bash
-php composer.phar require byrnedo/php-nats-streaming:dev-master
+php composer.phar require 'byrnedo/php-nats-streaming:^0.1.0'
 ```
 
 ## Usage
