@@ -29,6 +29,27 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c = new Connection($options);
         //$this->c->connect();
     }
+
+
+    public function testUnixNanos(){
+        $timeAsNanos = Connection::unixTimeNanos();
+
+        sleep(1);
+
+        $timeAsNanosAfter = Connection::unixTimeNanos();
+
+        $this->assertInternalType('int', $timeAsNanos);
+
+        $delta = $timeAsNanosAfter - $timeAsNanos;
+        $this->assertGreaterThanOrEqual(1000000000, $delta);
+        // margin of 10 microseconds
+        $this->assertLessThan(1001000000, $delta);
+
+        $timeNowNanos = Connection::unixTimeNanos();
+        $timeNowSeconds = time();
+        $this->assertEquals($timeNowSeconds,(int)($timeNowNanos / 1000000000));
+
+    }
     /**
      * Test Connection.
      *

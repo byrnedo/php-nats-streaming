@@ -3,6 +3,7 @@
 
 namespace NatsStreaming;
 
+use Exception;
 use Nats\Message;
 use Nats\Php71RandomGenerator;
 use NatsStreaming\Contracts\ConnectionContract;
@@ -212,6 +213,18 @@ class Connection implements ConnectionContract
         return $this->_subscribe($subjects, $qGroup, $cb, $subscriptionOptions);
     }
 
+    /**
+     * Returns unix time in nanoseconds
+     * could use `date +%S` instead, need to benchmark
+     * @return int
+     */
+    public static function unixTimeNanos(){
+        list ($micro, $secs) = explode(" ", microtime());
+        $nanosOffset = $micro * 1000000000;
+        $totalNanos = $secs * 1000000000 + $nanosOffset;
+        return (int) $totalNanos;
+    }
+
 
     /**
      *
@@ -258,7 +271,8 @@ class Connection implements ConnectionContract
                 $req->setStartSequence($subscriptionOptions->getStartSequence());
                 break;
             case StartPosition::TimeDeltaStart_VALUE:
-                $nowNano = microtime() * 1000;
+
+                $nowNano = self::unixTimeNanos();
                 $req->setStartTimeDelta($nowNano - $subscriptionOptions->getStartMicroTime() * 1000);
                 break;
         }
