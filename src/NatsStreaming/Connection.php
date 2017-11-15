@@ -104,7 +104,7 @@ class Connection implements ConnectionContract
         $this->natsCon->connect($timeout);
 
         $this->timeout      = $timeout;
-        $hbInbox = $this->randomGenerator->generateString(self::UID_LENGTH);
+        $hbInbox = uniqid('_INBOX.');
 
         //$this->natsCon->subscribe($hbInbox, function($message) { $this->processHeartbeat($message);});
 
@@ -318,6 +318,7 @@ class Connection implements ConnectionContract
 
         $isManualAck = $sub->getOpts()->isManualAck();
         $cb = $sub->getCb();
+        // TODO - should we ack if no cb?
         if ($cb != null) {
             $cb($message);
         }

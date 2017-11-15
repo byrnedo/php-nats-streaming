@@ -82,13 +82,16 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     {
         $this->c->connect();
 
+
+        $toSend = 10;
+
         $subject = 'test.subscribe.'.uniqid();
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
         $subOptions->setStartAt(StartPosition::First());
 
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < $toSend; $i++) {
             $this->c->publish($subject, 'foobar' . $i);
         }
 
@@ -98,15 +101,74 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             /**
              * @var $message MsgProto
              */
-            $this->assertEquals('foobar' . $got, $message->getData());
+            $this->assertEquals($got + 1, $message->getSequence());
             $got ++;
         }, $subOptions);
 
-        $this->c->wait(10);
+        $this->c->wait($toSend);
 
-        $this->assertEquals(10, $got);
+        $this->assertEquals($toSend, $got);
 
         $this->c->close();
+    }
+
+    /**
+     *
+     */
+    public function testDurableSubscription(){
+        $this->c->connect();
+
+        $toSend = 2;
+
+        $subject = 'test.subscribe.durable.'.uniqid();
+
+        $durable = 'durable';
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+        $subOptions->setDurableName($durable);
+
+        $got = 0;
+        $this->c->subscribe($subject, function ($message) use (&$got) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($got + 1, $message->getSequence());
+            $got ++;
+        }, $subOptions);
+
+        for ($i = 0; $i < $toSend; $i++) {
+            $this->c->publish($subject, 'foobar' . $i);
+        }
+
+        $this->c->wait($toSend);
+
+        $this->assertEquals($toSend, $got);
+
+        $this->c->close();
+
+        $this->c->connect();
+        $this->c->publish($subject, 'foobarnew');
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+        $subOptions->setDurableName($durable);
+
+
+        $sub = $this->c->subscribe($subject, function ($message) use (&$toSend) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($toSend + 1, $message->getSequence());
+        }, $subOptions);
+
+
+        $this->c->wait(1);
+
+        $this->c->close();
+
+
+
     }
 
     /**
