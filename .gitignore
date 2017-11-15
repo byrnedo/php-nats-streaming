@@ -2,7 +2,7 @@
 
 !/vendor/.gitkeep
 /.idea
-/.build
+/build
 
 /.protocol-mod.proto
 
