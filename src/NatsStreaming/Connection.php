@@ -231,7 +231,6 @@ class Connection implements ConnectionContract
             $subject,
             $qGroup,
             $inbox,
-            '', // TODO - is this required??
             $subscriptionOptions,
             $cb,
             $this

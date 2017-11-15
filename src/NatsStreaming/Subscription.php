@@ -2,6 +2,7 @@
 
 namespace NatsStreaming;
 
+use Exception;
 use Nats\Message;
 use NatsStreaming\Exceptions\TimeoutException;
 use NatsStreaming\Exceptions\UnsubscribeException;
@@ -48,29 +49,18 @@ class Subscription
      * @param $subject
      * @param $qGroup
      * @param $inbox
-     * @param $ackInbox
      * @param $opts
      * @param $cb
      * @param $stanCon
      */
-    public function __construct($subject, $qGroup, $inbox, $ackInbox, $opts, $cb, $stanCon)
+    public function __construct($subject, $qGroup, $inbox, $opts, $cb, $stanCon)
     {
         $this->subject = $subject;
         $this->qGroup = $qGroup;
         $this->inbox = $inbox;
-        $this->ackInbox = $ackInbox;
         $this->opts = $opts;
         $this->cb = $cb;
         $this->stanCon = $stanCon;
-    }
-    /**
-     * @param mixed $subject
-     * @return Subscription
-     */
-    public function setSubject($subject)
-    {
-        $this->subject = $subject;
-        return $this;
     }
 
     /**
@@ -81,15 +71,6 @@ class Subscription
         return $this->subject;
     }
 
-    /**
-     * @param mixed $qGroup
-     * @return Subscription
-     */
-    public function setQGroup($qGroup)
-    {
-        $this->qGroup = $qGroup;
-        return $this;
-    }
 
     /**
      * @return mixed
@@ -99,15 +80,6 @@ class Subscription
         return $this->qGroup;
     }
 
-    /**
-     * @param mixed $inbox
-     * @return Subscription
-     */
-    public function setInbox($inbox)
-    {
-        $this->inbox = $inbox;
-        return $this;
-    }
 
     /**
      * @return mixed
@@ -135,15 +107,6 @@ class Subscription
         return $this->ackInbox;
     }
 
-    /**
-     * @param SubscriptionOptions $opts
-     * @return Subscription
-     */
-    public function setOpts($opts)
-    {
-        $this->opts = $opts;
-        return $this;
-    }
 
     /**
      * @return SubscriptionOptions
@@ -153,15 +116,6 @@ class Subscription
         return $this->opts;
     }
 
-    /**
-     * @param callable $cb
-     * @return Subscription
-     */
-    public function setCb(callable $cb)
-    {
-        $this->cb = $cb;
-        return $this;
-    }
 
     /**
      * @return null|callable
@@ -170,6 +124,7 @@ class Subscription
     {
         return $this->cb;
     }
+
 
     /**
      * @param string $sid
@@ -188,6 +143,15 @@ class Subscription
     {
         return $this->sid;
     }
+
+    /**
+     * @return Connection
+     */
+    public function getStanCon()
+    {
+        return $this->stanCon;
+    }
+
 
     /**
      * Unsubscribe removes interest in the subscription.
@@ -259,21 +223,4 @@ class Subscription
         }
     }
 
-    /**
-     * @param Connection $stanCon
-     * @return Subscription
-     */
-    public function setStanCon($stanCon)
-    {
-        $this->stanCon = $stanCon;
-        return $this;
-    }
-
-    /**
-     * @return Connection
-     */
-    public function getStanCon()
-    {
-        return $this->stanCon;
-    }
 }

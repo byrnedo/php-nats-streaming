@@ -43,6 +43,8 @@ class ConnectionOptions
         'discoverPrefix',
         //'maxPubAcksInflight',
         'natsOptions',
+        'clientID',
+        'clusterID',
     ];
 
 
@@ -90,7 +92,7 @@ class ConnectionOptions
      */
     public function setNatsOptions($natsOptions)
     {
-        $this->natsOptions = new \Nats\ConnectionOptions($natsOptions);
+        $this->natsOptions = $natsOptions;
         return $this;
     }
 
