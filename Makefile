@@ -15,9 +15,6 @@ cs: lint
 test:
 	./vendor/bin/phpunit --debug
 
-cover:
-	./vendor/bin/phpunit --coverage-html ./cover
-
 lint:
 	find src -name *.php -exec php -l {} \;
 	find tests -name *.php -exec php -l {} \;

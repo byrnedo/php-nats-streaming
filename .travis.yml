@@ -15,8 +15,8 @@ before_install:
 before_script:
   - make dist-clean
   - make deps
-script:
   - mkdir -p build/logs
+script:
   - make lint
   - make test
 after_script:
