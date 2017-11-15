@@ -37,6 +37,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     public function testConnection()
     {
         // Connect.
+        $this->c->close();
         $this->c->connect();
         $this->assertTrue($this->c->isConnected());
         // Disconnect.
@@ -51,7 +52,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
      */
     public function testPublish()
     {
-        $this->c->connect();
+        $this->c->reconnect();
         $this->c->publish('foo', 'bar');
         $count = $this->c->pubsCount();
         $this->assertInternalType('int', $count);
@@ -66,6 +67,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
      */
     public function testReconnect()
     {
+        $this->c->close();
         $this->c->connect();
         $this->assertTrue($this->c->isConnected());
         $this->c->reconnect();
@@ -80,10 +82,10 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
      */
     public function testSubscribe()
     {
-        $this->c->connect();
+        $this->c->reconnect();
 
 
-        $toSend = 10;
+        $toSend = 100;
 
         $subject = 'test.subscribe.'.uniqid();
 
@@ -113,12 +115,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     *
+     * Test durable sub. Should pick up where it left off in case of a $sub->close or a $c->close
      */
     public function testDurableSubscription(){
-        $this->c->connect();
+        $this->c->reconnect();
 
-        $toSend = 2;
+        $toSend = 100;
 
         $subject = 'test.subscribe.durable.'.uniqid();
 
@@ -154,7 +156,6 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $subOptions->setDurableName($durable);
 
-
         $sub = $this->c->subscribe($subject, function ($message) use (&$toSend) {
             /**
              * @var $message MsgProto
@@ -167,8 +168,6 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->close();
 
-
-
     }
 
     /**
@@ -176,28 +175,30 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
      */
     public function testQueueGroupSubscribe(){
 
-        $this->c->connect();
+        $this->c->reconnect();
 
-        $subject = 'test.subscribe.qgroup';
+        $subject = 'test.subscribe.qgroup.' . uniqid();
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+        $toSend = 100;
 
         $got = 0;
         $this->c->queueSubscribe($subject, 'testQueueGroup', function ($message) use (&$got) {
             /**
              * @var $message MsgProto
              */
-            $this->assertEquals('foobar' . $got, $message->getData());
+            $this->assertEquals($got + 1, $message->getSequence());
             $got ++;
         }, $subOptions);
 
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < $toSend; $i++) {
             $this->c->publish($subject, 'foobar' . $i);
         }
 
-        $this->c->wait(10);
+        $this->c->wait($toSend);
 
-        $this->assertEquals(10, $got);
+        $this->assertEquals($toSend, $got);
 
         $this->c->close();
     }
