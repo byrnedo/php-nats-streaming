@@ -1,10 +1,17 @@
 # PHP Nats Streaming Server Client
 
-## Travis
+## Build
 
 | Master  | Develop |
 | ------------- | ------------- |
 | [![Build Status](https://travis-ci.org/byrnedo/php-nats-streaming.svg?branch=master)](https://travis-ci.org/byrnedo/php-nats-streaming)  | [![Build Status](https://travis-ci.org/byrnedo/php-nats-streaming.svg?branch=develop)](https://travis-ci.org/byrnedo/php-nats-streaming)  |
+
+## Coverage
+
+| Master  | Develop |
+| ------------- | ------------- |
+| [![Coverage Status](https://coveralls.io/repos/github/byrnedo/php-nats-streaming/badge.svg?branch=master)](https://coveralls.io/github/byrnedo/php-nats-streaming?branch=master)  | [![Coverage Status](https://coveralls.io/repos/github/byrnedo/php-nats-streaming/badge.svg?branch=develop)](https://coveralls.io/github/byrnedo/php-nats-streaming?branch=develop)  |
+
 
 
 ## Intro
