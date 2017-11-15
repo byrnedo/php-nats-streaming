@@ -155,6 +155,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
         $subOptions->setDurableName($durable);
+        // should ignore last received option
+        $subOptions->setStartAt(StartPosition::LastReceived());
 
         $sub = $this->c->subscribe($subject, function ($message) use (&$toSend) {
             /**
