@@ -211,7 +211,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->connect();
 
-        $subject = 'test.unsub';
+        $subject = 'test.unsub.'.uniqid();
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
