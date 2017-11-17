@@ -53,7 +53,10 @@ $c = new \NatsStreaming\Connection($options);
 $c->connect();
 
 // Publish
-$c->publish('special.subject', 'some serialized payload...');
+$r = $c->publish('special.subject', 'some serialized payload...');
+
+// optionally wait for the ack
+$r->wait();
 
 $c->close();
 
