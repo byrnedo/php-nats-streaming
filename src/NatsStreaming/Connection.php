@@ -498,11 +498,11 @@ class Connection
     }
 
     private function waitForSubMessage($sid, $messages = 1){
-        $initialCount = $this->getSubMsgsReceived($sid);
+        $initialWitnessed = $this->getSubMsgsWitnessed($sid);
         while(true) {
 
             $countPreRead = $this->getSubMsgsReceived($sid);
-            if (($countPreRead - $initialCount) >= $messages) {
+            if (($countPreRead - $initialWitnessed) >= $messages) {
                 return;
             }
 

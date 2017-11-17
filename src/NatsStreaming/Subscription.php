@@ -45,7 +45,7 @@ class Subscription
     private $stanCon = null;
 
     private $messagesReceived = 0;
-    private $lastSpotted = 0;
+    private $messagesWitnessed = 0;
 
     /**
      * Subscription constructor.
@@ -228,20 +228,33 @@ class Subscription
         }
     }
 
-    public function wait($messages = 1) {
+    public function wait($messages = 1)
+    {
 
+        $initialWitnessed = $this->messagesWitnessed;
         while(true) {
-            $awaitingSpot = $this->messagesReceived - $this->lastSpotted;
-            if ($awaitingSpot >= $messages) {
-                $this->lastSpotted += $messages;
-                return;
-            }
-            if (!$this->socketInGoodHealth()){
-                return;
-            }
-            $this->getStanCon()->natsConn()->wait(1);
-        }
 
+            $countPreRead = $this->messagesReceived;
+            if (($countPreRead - $initialWitnessed) >= $messages) {
+                return;
+            }
+
+            if ($this->messagesWitnessed < $countPreRead) {
+                $this->messagesWitnessed++;
+                continue;
+            }
+
+            if (!$this->socketInGoodHealth()) {
+                return;
+            }
+            $this->stanCon->natsCon->wait(1);
+
+            $countPostRead = $this->messagesReceived;
+            if ($countPostRead > $countPreRead) {
+                // we got one
+                $this->messagesWitnessed ++;
+            }
+        }
     }
 
     private function socketInGoodHealth(){
