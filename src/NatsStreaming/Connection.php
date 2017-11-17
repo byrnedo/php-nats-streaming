@@ -50,8 +50,6 @@ class Connection
     private $closeRequests;
 
     private $subCbMap = [];
-    private $subMessagesReceivedMap = [];
-    private $subMessagesWitnessedMap = [];
 
     private $connected;
 
@@ -67,6 +65,11 @@ class Connection
     private $subCloseRequests;
 
     private $timeout;
+
+    /**
+     * @var MessageCounter
+     */
+    private $witness;
 
     /**
      * Connection constructor.
@@ -88,6 +91,7 @@ class Connection
             $this->randomGenerator = $randomFactory->getLowStrengthGenerator();
         }
 
+        $this->witness = new MessageCounter();
         $this->natsCon = new \Nats\Connection($this->options->getNatsOptions());
     }
 
@@ -489,7 +493,7 @@ class Connection
             /**
              * @var $message Message
              */
-            $this->incSubMsgsReceived($message->getSid());
+            $this->witness->incSubMsgsReceived($message->getSid());
             $cb($message);
         });
         $this->natsCon->unsubscribe($sid,1);
@@ -498,16 +502,16 @@ class Connection
     }
 
     private function waitForSubMessage($sid, $messages = 1){
-        $initialWitnessed = $this->getSubMsgsWitnessed($sid);
+        $initialWitnessed = $this->witness->getSubMsgsWitnessed($sid);
         while(true) {
 
-            $countPreRead = $this->getSubMsgsReceived($sid);
+            $countPreRead = $this->witness->getSubMsgsReceived($sid);
             if (($countPreRead - $initialWitnessed) >= $messages) {
                 return;
             }
 
-            if ($this->getSubMsgsWitnessed($sid) < $countPreRead) {
-                $this->incSubMsgsWitnessed($sid);
+            if ($this->witness->getSubMsgsWitnessed($sid) < $countPreRead) {
+                $this->witness->incSubMsgsWitnessed($sid);
                 continue;
             }
 
@@ -516,16 +520,18 @@ class Connection
             }
             $this->natsConn()->wait(1);
 
-            $countPostRead = $this->getSubMsgsReceived($sid);
+            $countPostRead = $this->witness->getSubMsgsReceived($sid);
             if ($countPostRead > $countPreRead) {
                 // we got one
-                $this->incSubMsgsWitnessed($sid,1);
+                $this->witness->incSubMsgsWitnessed($sid,1);
             }
         }
     }
 
+    /**
+     * @return bool
+     */
     private function socketInGoodHealth(){
-
 
         $streamSocket = $this->natsCon->getStreamSocket();
         if (!$streamSocket) {
@@ -537,41 +543,4 @@ class Connection
 
     }
 
-    private function incSubMsgsReceived($sid){
-        $count = @$this->subMessagesReceivedMap[$sid];
-        if(!$count) {
-            $count = 0;
-        }
-
-        $count ++;
-        $this->subMessagesReceivedMap[$sid] = $count;
-    }
-
-    private function getSubMsgsReceived($sid) {
-        $count = @$this->subMessagesReceivedMap[$sid];
-        if(!$count) {
-            $count = 0;
-        }
-
-        return $count;
-    }
-
-    private function incSubMsgsWitnessed($sid, $messages = 1) {
-
-        $count = @$this->subMessagesWitnessedMap[$sid];
-        if(!$count) {
-            $count = 0;
-        }
-
-        $count += $messages;
-        $this->subMessagesWitnessedMap[$sid] = $count;
-    }
-
-    private function getSubMsgsWitnessed($sid) {
-        $count = @$this->subMessagesWitnessedMap[$sid];
-        if(!$count) {
-            $count = 0;
-        }
-        return $count;
-    }
 }

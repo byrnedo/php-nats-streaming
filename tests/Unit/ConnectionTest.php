@@ -177,10 +177,6 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c->close();
     }
 
-    /**
-
-        $this->c->close();
-    }
 
     /**
      * Test durable sub. Should pick up where it left off in case of a $sub->close or a $c->close
@@ -240,6 +236,100 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $sub->wait(1);
 
         $this->c->close();
+
+    }
+
+    /**
+     */
+    public function testMultipleDurableSubscription(){
+        $this->c->reconnect();
+
+        $toSend = 100;
+
+        $subject = 'test.subscribe.durable.'.uniqid();
+
+        $durable = 'durable';
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+        $subOptions->setDurableName($durable);
+        //$subOptions->setStartAt(StartPosition::First());
+
+        $opts = new ConnectionOptions();
+        $opts->setClientID($this->c->options->getClientID());
+        $c2 = new Connection($opts);
+        $c2->connect();
+
+
+        $got1 = 0;
+
+        $sub1 = $this->c->subscribe($subject, function ($message) use (&$got1) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($got1 + 1, $message->getSequence());
+            $got1 ++;
+        }, $subOptions);
+
+        $got2 = 0;
+
+        $subOptions->setDurableName($durable.'-b');
+        $sub2 = $c2->subscribe($subject, function ($message) use (&$got2) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($got2 + 1, $message->getSequence());
+            $got2 ++;
+        }, $subOptions);
+
+        for ($i = 0; $i < $toSend; $i++) {
+            $this->c->publish($subject, 'foobar' . $i, true);
+        }
+
+        $sub1->wait($toSend);
+        $sub2->wait($toSend);
+
+        $this->assertEquals($toSend, $got1);
+
+        $c2->close();
+        $c2->connect();
+        $this->c->close();
+        $this->c->connect();
+
+        $this->c->publish($subject, 'foobarnew');
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+        $subOptions->setDurableName($durable);
+        // should ignore last received option
+        $subOptions->setStartAt(StartPosition::LastReceived());
+
+        $sub1 = $this->c->subscribe($subject, function ($message) use (&$toSend) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($toSend + 1, $message->getSequence());
+        }, $subOptions);
+
+        $subOptions->setDurableName($durable.'-b');
+        $sub2 = $this->c->subscribe($subject, function ($message) use (&$toSend) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($toSend + 1, $message->getSequence());
+        }, $subOptions);
+
+
+        $sub1->wait(1);
+        $sub2->wait(1);
+
+        $this->c->close();
+        try {
+            $c2->close();
+        } catch(\NatsStreaming\Exceptions\DisconnectException $e) {
+
+            $this->assertEquals('stan: unknown clientID', $e->getMessage());
+        }
 
     }
 
