@@ -120,7 +120,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
 
         $got = 0;
-        $this->c->subscribe($subject, function ($message) use (&$got) {
+        $sub = $this->c->subscribe($subject, function ($message) use (&$got) {
             /**
              * @var $message MsgProto
              */
@@ -128,7 +128,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $got ++;
         }, $subOptions);
 
-        $this->c->wait($toSend);
+        $sub->wait($toSend);
 
         $this->assertEquals($toSend, $got);
 
@@ -150,9 +150,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
         $subOptions->setDurableName($durable);
+        //$subOptions->setStartAt(StartPosition::First());
+
 
         $got = 0;
-        $this->c->subscribe($subject, function ($message) use (&$got) {
+
+        $sub = $this->c->subscribe($subject, function ($message) use (&$got) {
             /**
              * @var $message MsgProto
              */
@@ -161,10 +164,10 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }, $subOptions);
 
         for ($i = 0; $i < $toSend; $i++) {
-            $this->c->publish($subject, 'foobar' . $i);
+            $this->c->publish($subject, 'foobar' . $i, true);
         }
 
-        $this->c->wait($toSend);
+        $sub->wait($toSend);
 
         $this->assertEquals($toSend, $got);
 
@@ -187,7 +190,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }, $subOptions);
 
 
-        $this->c->wait(1);
+        $sub->wait(1);
 
         $this->c->close();
 
@@ -207,7 +210,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $toSend = 100;
 
         $got = 0;
-        $this->c->queueSubscribe($subject, 'testQueueGroup', function ($message) use (&$got) {
+        $sub = $this->c->queueSubscribe($subject, 'testQueueGroup', function ($message) use (&$got) {
             /**
              * @var $message MsgProto
              */
@@ -219,7 +222,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $this->c->publish($subject, 'foobar' . $i);
         }
 
-        $this->c->wait($toSend);
+        $sub->wait($toSend);
+
 
         $this->assertEquals($toSend, $got);
 
@@ -250,7 +254,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->publish($subject, 'foobar' );
 
-        $this->c->wait(1);
+        $sub->wait(1);
 
         $this->assertEquals(1, $got);
 
@@ -262,7 +266,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->publish($subject, 'foobar' );
 
-        $this->c->wait(1);
+        $this->c->natsCon->setStreamTimeout(5);
+        $sub->wait(1);
 
         $this->assertEquals(1, $got);
 

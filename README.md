@@ -72,7 +72,7 @@ $sub = $c->subscribe('special.subject', function ($message) {
     // implement
 }, $subOptions);
 
-$c->wait(1);
+$sub->wait(1);
 
 // not explicitly needed
 $sub->unsubscribe(); // or $sub->close();
@@ -93,7 +93,7 @@ $sub = $c->queueSubscribe('specialer.subject', 'workgroup', function ($message) 
 }, $subOptions);
 
 
-$c->wait(1);
+$sub->wait(1);
 
 // not explicitly needed
 $sub->close(); // or $sub->unsubscribe();
@@ -117,7 +117,7 @@ $sub = $c->subscribe('special.subject', function ($message) {
     $message->ack();
 }, $subOptions);
 
-$c->wait(1);
+$sub->wait(1);
 
 $c->close();
 

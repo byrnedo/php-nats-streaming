@@ -44,6 +44,9 @@ class Subscription
      */
     private $stanCon = null;
 
+    private $messagesReceived = 0;
+    private $lastSpotted = 0;
+
     /**
      * Subscription constructor.
      * @param $subject
@@ -59,7 +62,10 @@ class Subscription
         $this->qGroup = $qGroup;
         $this->inbox = $inbox;
         $this->opts = $opts;
-        $this->cb = $cb;
+        $this->cb = function($message)use($cb){
+            $this->messagesReceived ++;
+            $cb($message);
+        };
         $this->stanCon = $stanCon;
     }
 
@@ -206,8 +212,7 @@ class Subscription
          */
         $resp = null;
 
-        $this->stanCon->natsConn()->request($reqSubject, $req->toStream()->getContents(), function($message) use (&$resp) {
-
+        $this->stanCon->doTrackedRequest($reqSubject, $req->toStream()->getContents(), function($message) use (&$resp) {
             /**
              * @var $message Message
              */
@@ -221,6 +226,35 @@ class Subscription
         if ($resp->getError()) {
             throw new UnsubscribeException($resp->getError());
         }
+    }
+
+    public function wait($messages = 1) {
+
+        while(true) {
+            $awaitingSpot = $this->messagesReceived - $this->lastSpotted;
+            if ($awaitingSpot >= $messages) {
+                $this->lastSpotted += $messages;
+                return;
+            }
+            if (!$this->socketInGoodHealth()){
+                return;
+            }
+            $this->getStanCon()->natsConn()->wait(1);
+        }
+
+    }
+
+    private function socketInGoodHealth(){
+
+
+        $streamSocket = $this->stanCon->natsCon->getStreamSocket();
+        if (!$streamSocket) {
+            return false;
+        }
+        $info = stream_get_meta_data($streamSocket);
+        $ok = is_resource($streamSocket) === true && feof($streamSocket) === false && empty($info['timed_out']) === true;
+        return $ok;
+
     }
 
 }

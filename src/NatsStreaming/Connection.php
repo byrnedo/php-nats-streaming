@@ -49,7 +49,9 @@ class Connection implements ConnectionContract
 
     private $closeRequests;
 
-    private $subMap = [];
+    private $subCbMap = [];
+    private $subMessagesReceivedMap = [];
+    private $subMessagesWitnessedMap = [];
 
     private $connected;
 
@@ -125,9 +127,10 @@ class Connection implements ConnectionContract
          */
         $resp = null;
 
-        $this->natsCon->request($discoverSubject, $data, function ($message) use (&$resp) {
+        $this->doTrackedRequest($discoverSubject, $data, function ($message) use (&$resp) {
             $resp = ConnectResponse::fromStream($message->getBody());
         });
+
 
         if (!$resp) {
             throw new TimeoutException();
@@ -156,10 +159,9 @@ class Connection implements ConnectionContract
      *
      * @param $subject
      * @param $data
-     * @param bool $waitForAck Wait for an ack from the server
-     * @throws PublishException
+     * @param bool $ack If false we wont wait for the ack from the server
      */
-    public function publish($subject, $data, $waitForAck = true)
+    public function publish($subject, $data, $ack = true)
     {
 
         $subj = $this->pubPrefix . '.' . $subject;
@@ -173,32 +175,20 @@ class Connection implements ConnectionContract
 
         $bytes = $req->toStream()->getContents();
 
-        $ackSubject = self::DEFAULT_ACK_PREFIX . '.' . $this->randomGenerator->generateString(self::UID_LENGTH);
+        $ackSubject = uniqid(self::DEFAULT_ACK_PREFIX . '.');
 
-        error_log($peGUID);
-        if ($waitForAck) {
-            $acked = false;
-            /**
-             * @var $ack Ack
-             */
-            $ack = null;
+        if ($ack) {
             $sid   = $this->natsCon->subscribe(
                 $ackSubject,
-                function ($message) use (&$acked, &$ack) {
+                function ($message) use (&$acked) {
                     /**
                      * @var $message Message
                      */
-                    error_log($message->getSubject());
-                    $ack = Ack::fromStream($message->getBody());
-                    error_log($ack->getSequence());
+                    Ack::fromStream($message->getBody());
                 }
             );
             $this->natsCon->unsubscribe($sid, 1);
             $this->natsCon->publish($subj, $bytes, $ackSubject);
-            $this->natsCon->wait(1);
-            if (!$ack) {
-                throw new PublishException('never got ack from server');
-            }
 
         } else {
             $this->natsCon->publish($subj, $bytes, $ackSubject);
@@ -268,13 +258,13 @@ class Connection implements ConnectionContract
             $cb,
             $this
         );
-        $this->subMap[$sub->getInbox()] = $sub;
+        $this->subCbMap[$sub->getInbox()] = $sub;
         $sid = $this->natsCon->subscribe($sub->getInbox(), function ($message) {
             $this->processMsg($message);
         });
 
         $sub->setSid($sid);
-        $this->subMap[$sub->getInbox()] = $sub;
+        $this->subCbMap[$sub->getInbox()] = $sub;
 
 
         $req = new SubscriptionRequest();
@@ -303,9 +293,10 @@ class Connection implements ConnectionContract
          */
         $resp = null;
         try {
-            $this->natsCon->request($this->subRequests, $data, function ($message) use (&$resp) {
+            $this->doTrackedRequest($this->subRequests, $data, function ($message) use (&$resp) {
                 $resp = SubscriptionResponse::fromStream($message->getBody());
             });
+
         } catch (\Exception $e) {
             $this->natsCon->unsubscribe($sid);
             throw $e;
@@ -336,11 +327,10 @@ class Connection implements ConnectionContract
 
         $message = Msg::fromStream($rawMessage->getBody());
 
-
         /**
          * @var $sub Subscription
          */
-        $sub = @$this->subMap[$rawMessage->getSubject()];
+        $sub = @$this->subCbMap[$rawMessage->getSubject()];
 
         if ($sub == null) {
             return;
@@ -454,7 +444,7 @@ class Connection implements ConnectionContract
          */
         $resp = null;
         $reqBody  = $req->toStream()->getContents();
-        $this->natsCon->request($this->closeRequests, $reqBody, function ($message) use (&$resp) {
+        $this->doTrackedRequest($this->closeRequests, $reqBody, function ($message) use (&$resp) {
             /**
              * @var $message Message
              */
@@ -503,5 +493,103 @@ class Connection implements ConnectionContract
     public function wait($quantity = 0)
     {
         return $this->natsCon->wait($quantity);
+    }
+
+    public function listen($timeoutSeconds = 30){
+
+        $start = time();
+
+        $this->natsConn()->setStreamTimeout($timeoutSeconds);
+        while($this->wait(1)) {
+            $elapsed = time() - $start;
+            if ($elapsed > $timeoutSeconds) {
+                return;
+            }
+        }
+    }
+
+    public function doTrackedRequest($subject, $data, callable $cb){
+        $replyInbox = uniqid('_INBOX');
+        $sid = $this->natsCon->subscribe($replyInbox , function ($message) use (&$resp, $cb) {
+            /**
+             * @var $message Message
+             */
+            $this->incSubMsgsReceived($message->getSid());
+            $cb($message);
+        });
+        $this->natsCon->unsubscribe($sid,1);
+        $this->natsCon->publish($subject, $data, $replyInbox);
+        $this->waitForSubMessage($sid, 1);
+    }
+
+    private function waitForSubMessage($sid, $messages = 1){
+        $initialCount = $this->getSubMsgsReceived($sid);
+        while(true) {
+            $countPreRead = $this->getSubMsgsReceived($sid);
+            if (($countPreRead - $initialCount) >= $messages) {
+                return;
+            }
+            if (!$this->socketInGoodHealth()) {
+                return;
+            }
+            $this->natsConn()->wait(1);
+
+            $countPostRead = $this->getSubMsgsReceived($sid);
+            if ($countPostRead > $countPreRead) {
+                // we got one
+                $this->incSubMsgsWitnessed($sid,1);
+            }
+        }
+    }
+
+    private function socketInGoodHealth(){
+
+
+        $streamSocket = $this->natsCon->getStreamSocket();
+        if (!$streamSocket) {
+            return false;
+        }
+        $info = stream_get_meta_data($streamSocket);
+        $ok = is_resource($streamSocket) === true && feof($streamSocket) === false && empty($info['timed_out']) === true;
+        return $ok;
+
+    }
+
+    private function incSubMsgsReceived($sid){
+        $count = @$this->subMessagesReceivedMap[$sid];
+        if(!$count) {
+            $count = 0;
+        }
+
+        $count ++;
+        $this->subMessagesReceivedMap[$sid] = $count;
+    }
+
+    private function getSubMsgsReceived($sid) {
+        $count = @$this->subMessagesReceivedMap[$sid];
+        if(!$count) {
+            $count = 0;
+        }
+
+        return $count;
+    }
+
+    private function incSubMsgsWitnessed($sid, $messages = 1) {
+
+        $count = @$this->subMessagesWitnessedMap[$sid];
+        if(!$count) {
+            $count = 0;
+        }
+
+        $count += $messages;
+        $this->subMessagesWitnessedMap[$sid] = $count;
+    }
+
+    private function getSubMsgsWitnessed($sid) {
+        $count = @$this->subMessagesWitnessedMap[$sid];
+        if(!$count) {
+            $count = 0;
+        }
+        return $count;
     }
 }
