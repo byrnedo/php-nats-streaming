@@ -23,7 +23,7 @@ use NatsStreamingProtos\SubscriptionRequest;
 use NatsStreamingProtos\SubscriptionResponse;
 use RandomLib\Factory;
 
-class Connection implements ConnectionContract
+class Connection
 {
 
 
@@ -480,31 +480,6 @@ class Connection implements ConnectionContract
     {
         if ($this->isConnected()) {
             $this->close();
-        }
-    }
-
-
-    /**
-     * Wait for next n messages
-     *
-     * @param int $quantity
-     * @return \Nats\Connection
-     */
-    public function wait($quantity = 0)
-    {
-        return $this->natsCon->wait($quantity);
-    }
-
-    public function listen($timeoutSeconds = 30){
-
-        $start = time();
-
-        $this->natsConn()->setStreamTimeout($timeoutSeconds);
-        while($this->wait(1)) {
-            $elapsed = time() - $start;
-            if ($elapsed > $timeoutSeconds) {
-                return;
-            }
         }
     }
 
