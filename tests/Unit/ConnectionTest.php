@@ -262,8 +262,6 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->publish($subject, 'foobar' );
 
-        $this->c->natsConn()->setStreamTimeout(1);
-
         $this->c->wait(1);
 
         $this->assertEquals(1, $got);

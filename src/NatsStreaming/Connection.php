@@ -9,8 +9,10 @@ use Nats\Php71RandomGenerator;
 use NatsStreaming\Contracts\ConnectionContract;
 use NatsStreaming\Exceptions\ConnectException;
 use NatsStreaming\Exceptions\DisconnectException;
+use NatsStreaming\Exceptions\PublishException;
 use NatsStreaming\Exceptions\SubscribeException;
 use NatsStreaming\Exceptions\TimeoutException;
+use NatsStreamingProtos\Ack;
 use NatsStreamingProtos\CloseRequest;
 use NatsStreamingProtos\CloseResponse;
 use NatsStreamingProtos\ConnectRequest;
@@ -154,8 +156,10 @@ class Connection implements ConnectionContract
      *
      * @param $subject
      * @param $data
+     * @param bool $waitForAck Wait for an ack from the server
+     * @throws PublishException
      */
-    public function publish($subject, $data)
+    public function publish($subject, $data, $waitForAck = true)
     {
 
         $subj = $this->pubPrefix . '.' . $subject;
@@ -171,19 +175,35 @@ class Connection implements ConnectionContract
 
         $ackSubject = self::DEFAULT_ACK_PREFIX . '.' . $this->randomGenerator->generateString(self::UID_LENGTH);
 
-        $sid   = $this->natsCon->subscribe(
-            $ackSubject,
-            function ($message) {
-                /**
-                 * @var $message Message
-                 */
-
-                //$resp = Ack::fromStream($message->getBody());
+        error_log($peGUID);
+        if ($waitForAck) {
+            $acked = false;
+            /**
+             * @var $ack Ack
+             */
+            $ack = null;
+            $sid   = $this->natsCon->subscribe(
+                $ackSubject,
+                function ($message) use (&$acked, &$ack) {
+                    /**
+                     * @var $message Message
+                     */
+                    error_log($message->getSubject());
+                    $ack = Ack::fromStream($message->getBody());
+                    error_log($ack->getSequence());
+                }
+            );
+            $this->natsCon->unsubscribe($sid, 1);
+            $this->natsCon->publish($subj, $bytes, $ackSubject);
+            $this->natsCon->wait(1);
+            if (!$ack) {
+                throw new PublishException('never got ack from server');
             }
-        );
-        $this->natsCon->unsubscribe($sid, 1);
-        $this->natsCon->publish($subj, $bytes, $ackSubject);
-        $this->natsCon->wait(1);
+
+        } else {
+            $this->natsCon->publish($subj, $bytes, $ackSubject);
+        }
+
         $this->pubs += 1;
     }
 
