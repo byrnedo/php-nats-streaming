@@ -258,16 +258,7 @@ class Subscription
     }
 
     private function socketInGoodHealth(){
-
-
-        $streamSocket = $this->stanCon->natsCon->getStreamSocket();
-        if (!$streamSocket) {
-            return false;
-        }
-        $info = stream_get_meta_data($streamSocket);
-        $ok = is_resource($streamSocket) === true && feof($streamSocket) === false && empty($info['timed_out']) === true;
-        return $ok;
-
+        return $this->stanCon->socketInGoodHealth();
     }
 
 }

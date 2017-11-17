@@ -67,11 +67,6 @@ class Connection
     private $timeout;
 
     /**
-     * @var MessageCounter
-     */
-    private $witness;
-
-    /**
      * Connection constructor.
      * @param ConnectionOptions|null $options
      */
@@ -163,9 +158,9 @@ class Connection
      *
      * @param $subject
      * @param $data
-     * @param bool $ack If false we wont wait for the ack from the server
+     * @return TrackedNatsSub
      */
-    public function publish($subject, $data, $ack = true)
+    public function publish($subject, $data)
     {
 
         $subj = $this->pubPrefix . '.' . $subject;
@@ -181,24 +176,23 @@ class Connection
 
         $ackSubject = uniqid(self::DEFAULT_ACK_PREFIX . '.');
 
-        if ($ack) {
-            $sid   = $this->natsCon->subscribe(
-                $ackSubject,
-                function ($message) use (&$acked) {
-                    /**
-                     * @var $message Message
-                     */
-                    Ack::fromStream($message->getBody());
-                }
-            );
-            $this->natsCon->unsubscribe($sid, 1);
-            $this->natsCon->publish($subj, $bytes, $ackSubject);
-
-        } else {
-            $this->natsCon->publish($subj, $bytes, $ackSubject);
-        }
+        $sid = $this->natsCon->subscribe(
+            $ackSubject,
+            function ($message) use (&$acked) {
+                /**
+                 * @var $message Message
+                 */
+                $this->witness->incSubMsgsReceived($message->getSid());
+                Ack::fromStream($message->getBody());
+            }
+        );
+        $this->natsCon->unsubscribe($sid, 1);
+        $this->natsCon->publish($subj, $bytes, $ackSubject);
 
         $this->pubs += 1;
+
+        return new TrackedNatsSub($sid, $this);
+
     }
 
     /**
@@ -452,7 +446,6 @@ class Connection
             /**
              * @var $message Message
              */
-
             if (!$this->msgIsEmpty($message->getBody())) {
                 $resp = CloseResponse::fromStream($message->getBody());
             }
@@ -487,9 +480,17 @@ class Connection
         }
     }
 
+    /**
+     *
+     * Do a plain nats request and wait for it's response in particular, not just any 1 message
+     *
+     * @param $subject
+     * @param $data
+     * @param callable $cb
+     */
     public function doTrackedRequest($subject, $data, callable $cb){
         $replyInbox = uniqid('_INBOX');
-        $sid = $this->natsCon->subscribe($replyInbox , function ($message) use (&$resp, $cb) {
+        $sid = $this->natsCon->subscribe($replyInbox , function ($message) use (&$resp, &$cb) {
             /**
              * @var $message Message
              */
@@ -498,40 +499,14 @@ class Connection
         });
         $this->natsCon->unsubscribe($sid,1);
         $this->natsCon->publish($subject, $data, $replyInbox);
-        $this->waitForSubMessage($sid, 1);
-    }
-
-    private function waitForSubMessage($sid, $messages = 1){
-        $initialWitnessed = $this->witness->getSubMsgsWitnessed($sid);
-        while(true) {
-
-            $countPreRead = $this->witness->getSubMsgsReceived($sid);
-            if (($countPreRead - $initialWitnessed) >= $messages) {
-                return;
-            }
-
-            if ($this->witness->getSubMsgsWitnessed($sid) < $countPreRead) {
-                $this->witness->incSubMsgsWitnessed($sid);
-                continue;
-            }
-
-            if (!$this->socketInGoodHealth()) {
-                return;
-            }
-            $this->natsConn()->wait(1);
-
-            $countPostRead = $this->witness->getSubMsgsReceived($sid);
-            if ($countPostRead > $countPreRead) {
-                // we got one
-                $this->witness->incSubMsgsWitnessed($sid,1);
-            }
-        }
+        $sub = new TrackedNatsSub($sid, $this);
+        $sub->wait();
     }
 
     /**
      * @return bool
      */
-    private function socketInGoodHealth(){
+    public function socketInGoodHealth(){
 
         $streamSocket = $this->natsCon->getStreamSocket();
         if (!$streamSocket) {
