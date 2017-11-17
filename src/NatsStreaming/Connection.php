@@ -525,10 +525,17 @@ class Connection implements ConnectionContract
     private function waitForSubMessage($sid, $messages = 1){
         $initialCount = $this->getSubMsgsReceived($sid);
         while(true) {
+
             $countPreRead = $this->getSubMsgsReceived($sid);
             if (($countPreRead - $initialCount) >= $messages) {
                 return;
             }
+
+            if ($this->getSubMsgsWitnessed($sid) < $countPreRead) {
+                $this->incSubMsgsWitnessed($sid);
+                continue;
+            }
+
             if (!$this->socketInGoodHealth()) {
                 return;
             }

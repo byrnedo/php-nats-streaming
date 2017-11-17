@@ -105,7 +105,6 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     {
         $this->c->reconnect();
 
-
         $toSend = 100;
 
         $subject = 'test.subscribe.'.uniqid();
@@ -131,6 +130,54 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $sub->wait($toSend);
 
         $this->assertEquals($toSend, $got);
+
+        $this->c->close();
+    }
+
+    public function testMultipleSubscriptions(){
+
+        $this->c->reconnect();
+
+        $toSend = 100;
+
+        $subject = 'test.subscribe.'.uniqid();
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+
+        $got1 = 0;
+        $sub1 = $this->c->subscribe($subject, function ($message) use (&$got1) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($got1 + 1, $message->getSequence());
+            $got1 ++;
+        }, $subOptions);
+
+        $got2 = 0;
+        $sub2 = $this->c->subscribe($subject, function ($message) use (&$got2) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($got2 + 1, $message->getSequence());
+            $got2 ++;
+        }, $subOptions);
+
+        for ($i = 0; $i < $toSend; $i++) {
+            $this->c->publish($subject, 'foobar' . $i);
+        }
+
+
+        $sub1->wait($toSend);
+        $sub2->wait($toSend);
+
+        $this->assertEquals($toSend, $got1);
+        $this->assertEquals($toSend, $got2);
+
+        $this->c->close();
+    }
+
+    /**
 
         $this->c->close();
     }
