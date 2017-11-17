@@ -301,27 +301,33 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
         $subOptions->setDurableName($durable);
-        // should ignore last received option
         $subOptions->setStartAt(StartPosition::LastReceived());
 
-        $sub1 = $this->c->subscribe($subject, function ($message) use (&$toSend) {
+        $got1 = 0;
+        $sub1 = $this->c->subscribe($subject, function ($message) use (&$toSend, &$got1) {
             /**
              * @var $message MsgProto
              */
+            $got1 ++;
             $this->assertEquals($toSend + 1, $message->getSequence());
         }, $subOptions);
 
+        $got2 = 0;
         $subOptions->setDurableName($durable.'-b');
-        $sub2 = $this->c->subscribe($subject, function ($message) use (&$toSend) {
+        $sub2 = $this->c->subscribe($subject, function ($message) use (&$toSend, &$got2) {
             /**
              * @var $message MsgProto
              */
+            $got2 ++;
             $this->assertEquals($toSend + 1, $message->getSequence());
         }, $subOptions);
 
 
         $sub1->wait(1);
         $sub2->wait(1);
+
+        $this->assertEquals(1, $got1);
+        $this->assertEquals(1, $got2);
 
         $this->c->close();
         try {
