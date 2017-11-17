@@ -9,6 +9,7 @@ class ConnectionOptionsTest extends \PHPUnit_Framework_TestCase
             'discoverPrefix' => 'foo',
             'clientID' => 'bar',
             'clusterID' =>'baz',
+            'foobar' => 'baz',
             'natsOptions' => new \Nats\ConnectionOptions(['host' => 'hosty'])
         ]);
 
