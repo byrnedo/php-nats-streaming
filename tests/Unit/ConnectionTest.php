@@ -114,8 +114,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $subOptions->setStartAt(StartPosition::First());
 
+
+        $rs = [];
         for ($i = 0; $i < $toSend; $i++) {
-            $r = $this->c->publish($subject, 'foobar' . $i);
+            $rs[] = $this->c->publish($subject, 'foobar' . $i);
+        }
+        foreach ($rs as $r) {
             $r->wait();
         }
 
@@ -165,8 +169,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $got2 ++;
         }, $subOptions);
 
+        $rs =[];
         for ($i = 0; $i < $toSend; $i++) {
-            $r = $this->c->publish($subject, 'foobar' . $i);
+            $rs[] = $this->c->publish($subject, 'foobar' . $i);
+        }
+
+        foreach($rs as $r) {
             $r->wait(1);
         }
 
@@ -209,8 +217,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $got ++;
         }, $subOptions);
 
+        $rs = [];
         for ($i = 0; $i < $toSend; $i++) {
-            $r = $this->c->publish($subject, 'foobar' . $i);
+            $rs[] = $this->c->publish($subject, 'foobar' . $i);
+        }
+
+        foreach($rs as $r) {
             $r->wait(1);
         }
 
@@ -230,15 +242,19 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         // should ignore last received option
         $subOptions->setStartAt(StartPosition::LastReceived());
 
-        $sub = $this->c->subscribe($subject, function ($message) use (&$toSend) {
+        $got = 0;
+        $sub = $this->c->subscribe($subject, function ($message) use (&$toSend, &$got) {
             /**
              * @var $message MsgProto
              */
             $this->assertEquals($toSend + 1, $message->getSequence());
+            $got ++;
         }, $subOptions);
 
 
         $sub->wait(1);
+
+        $this->assertEquals(1, $got);
 
         $this->c->close();
 
@@ -287,8 +303,14 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $got2 ++;
         }, $subOptions);
 
+
+        $rs = [];
         for ($i = 0; $i < $toSend; $i++) {
-            $r = $this->c->publish($subject, 'foobar' . $i);
+            $rs[] = $this->c->publish($subject, 'foobar' . $i);
+        }
+
+        // quicker
+        foreach($rs as $r) {
             $r->wait(1);
         }
 
@@ -369,8 +391,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $got ++;
         }, $subOptions);
 
+        $rs = [];
         for ($i = 0; $i < $toSend; $i++) {
-            $r = $this->c->publish($subject, 'foobar' . $i);
+            $rs[] = $this->c->publish($subject, 'foobar' . $i);
+        }
+
+        foreach($rs as $r) {
             $r->wait(1);
         }
 
