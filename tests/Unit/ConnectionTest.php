@@ -32,11 +32,11 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
 
     public function testUnixNanos(){
-        $timeAsNanos = Connection::unixTimeNanos();
+        $timeAsNanos = \NatsStreaming\Helpers\TimeHelpers::unixTimeNanos();
 
         sleep(1);
 
-        $timeAsNanosAfter = Connection::unixTimeNanos();
+        $timeAsNanosAfter = \NatsStreaming\Helpers\TimeHelpers::unixTimeNanos();
 
         $this->assertInternalType('int', $timeAsNanos);
 
@@ -45,7 +45,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         // margin of 10 microseconds
         $this->assertLessThan(1001000000, $delta);
 
-        $timeNowNanos = Connection::unixTimeNanos();
+        $timeNowNanos = \NatsStreaming\Helpers\TimeHelpers::unixTimeNanos();
         $timeNowSeconds = time();
         $this->assertEquals($timeNowSeconds,(int)($timeNowNanos / 1000000000));
 
@@ -75,7 +75,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     {
         $this->c->reconnect();
         $r = $this->c->publish('foo', 'bar');
-        $r->wait(1);
+        $r->wait();
         $count = $this->c->pubsCount();
         $this->assertInternalType('int', $count);
         $this->assertGreaterThan(0, $count);
@@ -119,6 +119,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         for ($i = 0; $i < $toSend; $i++) {
             $rs[] = $this->c->publish($subject, 'foobar' . $i);
         }
+
         foreach ($rs as $r) {
             $r->wait();
         }
@@ -132,6 +133,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $this->assertEquals($got + 1, $message->getSequence());
             $got ++;
         }, $subOptions);
+
 
         $sub->wait($toSend);
 
@@ -223,7 +225,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         foreach($rs as $r) {
-            $r->wait(1);
+            $r->wait();
         }
 
         $sub->wait($toSend);
@@ -234,7 +236,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->connect();
         $r = $this->c->publish($subject, 'foobarnew');
-        $r->wait(1);
+        $r->wait();
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
@@ -311,7 +313,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         // quicker
         foreach($rs as $r) {
-            $r->wait(1);
+            $r->wait();
         }
 
         $sub1->wait($toSend);
@@ -325,7 +327,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c->connect();
 
         $r = $this->c->publish($subject, 'foobarnew');
-        $r->wait(1);
+        $r->wait();
 
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
@@ -397,7 +399,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         foreach($rs as $r) {
-            $r->wait(1);
+            $r->wait();
         }
 
         $sub->wait($toSend);
@@ -443,7 +445,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->natsCon->setStreamTimeout(5);
         $r = $this->c->publish($subject, 'foobar' );
-        $r->wait(1);
+        $r->wait();
 
 
         $this->assertEquals(1, $got);

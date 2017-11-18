@@ -55,7 +55,7 @@ class Msg extends MsgProto
         $req->setSequence($this->getSequence());
         $data = $req->toStream()->getContents();
         $stanCon = $this->sub->getStanCon();
-        $stanCon->natsConn()->publish($this->sub->getAckInbox(), $data);
+        $stanCon->natsCon()->publish($this->sub->getAckInbox(), $data);
     }
 
 }

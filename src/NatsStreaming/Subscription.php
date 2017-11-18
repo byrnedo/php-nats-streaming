@@ -4,8 +4,13 @@ namespace NatsStreaming;
 
 use Exception;
 use Nats\Message;
+use NatsStreaming\Exceptions\SubscribeException;
 use NatsStreaming\Exceptions\TimeoutException;
 use NatsStreaming\Exceptions\UnsubscribeException;
+use NatsStreaming\Helpers\NatsHelper;
+use NatsStreaming\Helpers\TimeHelpers;
+use NatsStreamingProtos\StartPosition;
+use NatsStreamingProtos\SubscriptionRequest;
 use NatsStreamingProtos\SubscriptionResponse;
 use NatsStreamingProtos\UnsubscribeRequest;
 
@@ -44,8 +49,9 @@ class Subscription
      */
     private $stanCon = null;
 
-    private $messagesReceived = 0;
-    private $messagesWitnessed = 0;
+    private $active = false;
+
+    private $processedMessages = 0;
 
     /**
      * Subscription constructor.
@@ -53,20 +59,81 @@ class Subscription
      * @param $qGroup
      * @param $inbox
      * @param $opts
-     * @param $cb
+     * @param $msgCb
      * @param $stanCon
      */
-    public function __construct($subject, $qGroup, $inbox, $opts, $cb, $stanCon)
+    public function __construct($subject, $qGroup, $inbox, $opts, $msgCb, $stanCon)
     {
         $this->subject = $subject;
         $this->qGroup = $qGroup;
         $this->inbox = $inbox;
         $this->opts = $opts;
-        $this->cb = function($message)use($cb){
-            $this->messagesReceived ++;
-            $cb($message);
+        $this->cb = function($message)use($msgCb){
+            $this->processedMessages ++;
+            $msgCb($message);
         };
+
         $this->stanCon = $stanCon;
+
+    }
+
+    public function subscribe(){
+
+        $this->sid = $this->stanCon->natsCon()->subscribe($this->getInbox(), function ($message) {
+            $this->processMsg($message);
+        });
+
+
+        $subRequest = new SubscriptionRequest();
+        $subRequest->setSubject($this->getSubject());
+        $subRequest->setClientID($this->stanCon->options->getClientID());
+        $subRequest->setAckWaitInSecs($this->opts->getAckWaitSecs());
+        $subRequest->setMaxInFlight($this->opts->getMaxInFlight());
+        $subRequest->setDurableName($this->opts->getDurableName());
+        $subRequest->setInbox($this->getInbox());
+        $subRequest->setStartPosition($this->opts->getStartAt());
+
+        switch ($subRequest->getStartPosition()->value()) {
+            case StartPosition::SequenceStart_VALUE:
+                $subRequest->setStartSequence($this->opts->getStartSequence());
+                break;
+            case StartPosition::TimeDeltaStart_VALUE:
+
+                $nowNano = TimeHelpers::unixTimeNanos();
+                $subRequest->setStartTimeDelta($nowNano - $this->opts->getStartMicroTime() * 1000);
+                break;
+        }
+
+        $data = $subRequest->toStream()->getContents();
+
+        /**
+         * @var $resp SubscriptionResponse
+         */
+        $resp = null;
+        try {
+            $natsReq = new TrackedNatsRequest($this->stanCon->natsCon(), $this->stanCon->getSubRequests(), $data, function ($message) use (&$resp) {
+                $resp = SubscriptionResponse::fromStream($message->getBody());
+            });
+
+            $natsReq->wait();
+
+        } catch (\Exception $e) {
+            $this->stanCon->natsCon()->unsubscribe($this->getSid());
+            throw $e;
+        }
+
+        if (!$resp) {
+            $this->stanCon->natsCon()->unsubscribe($this->getSid());
+            throw new TimeoutException('no response for subscribe request');
+        }
+
+        if ($resp->getError()) {
+            $this->stanCon->natsCon()->unsubscribe($this->getSid());
+            throw new SubscribeException($resp->getError());
+        }
+
+
+        $this->setAckInbox($resp->getAckInbox());
     }
 
     /**
@@ -190,7 +257,7 @@ class Subscription
      */
     private function closeOrUnsubscribe($doClose) {
 
-        $this->stanCon->natsConn()->unsubscribe($this->sid);
+        $this->stanCon->natsCon()->unsubscribe($this->sid);
 
         $req = new UnsubscribeRequest();
         $req->setClientID($this->stanCon->options->getClientID());
@@ -212,12 +279,14 @@ class Subscription
          */
         $resp = null;
 
-        $this->stanCon->doTrackedRequest($reqSubject, $req->toStream()->getContents(), function($message) use (&$resp) {
+        $natsReq = new TrackedNatsRequest($this->stanCon->natsCon(), $reqSubject, $req->toStream()->getContents(), function($message) use (&$resp) {
             /**
              * @var $message Message
              */
             $resp = SubscriptionResponse::fromStream($message->getBody());
         });
+
+        $natsReq->wait();
 
         if ($resp == null) {
             throw new TimeoutException();
@@ -228,37 +297,83 @@ class Subscription
         }
     }
 
-    public function wait($messages = 1)
+    /**
+     * Callback which handles every MsgProto and finds the related callback for that message
+     *
+     * @param $rawMessage Message
+     */
+    private function processMsg($rawMessage)
     {
 
-        $initialWitnessed = $this->messagesWitnessed;
-        while(true) {
+        error_log('process sub');
 
-            $countPreRead = $this->messagesReceived;
-            if (($countPreRead - $initialWitnessed) >= $messages) {
-                return;
-            }
+        $newMessage = Msg::fromStream($rawMessage->getBody());
 
-            if ($this->messagesWitnessed < $countPreRead) {
-                $this->messagesWitnessed++;
-                continue;
-            }
+        // smuggle ack subject
+        $newMessage->setSub($this);
 
-            if (!$this->socketInGoodHealth()) {
-                return;
-            }
-            $this->stanCon->natsCon->wait(1);
+        if ($this->active) {
+            $cb = $this->getCb();
+            $cb($newMessage);
+        } else {
+            MessageCache::pushMessage($this->getSid(), $newMessage);
+        }
 
-            $countPostRead = $this->messagesReceived;
-            if ($countPostRead > $countPreRead) {
-                // we got one
-                $this->messagesWitnessed ++;
-            }
+        // ack it anyway
+        $isManualAck = $this->getOpts()->isManualAck();
+        if (!$isManualAck) {
+            $newMessage->ack();
         }
     }
 
-    private function socketInGoodHealth(){
-        return $this->stanCon->socketInGoodHealth();
+    private function dispatchCachedMessages($messages) {
+
+        $cachedMsgs = MessageCache::popMessages($this->getSid(), $messages);
+        $msgsDone = 0;
+
+        if ($cachedMsgs){
+            $cb = $this->getCb();
+            foreach($cachedMsgs as $msg) {
+                $cb($msg);
+                $msgsDone ++;
+
+                if ($msgsDone >= $messages) {
+                    break;
+                }
+            }
+
+        }
+
+        return $msgsDone;
+    }
+
+    public function wait($messages = 1)
+    {
+
+
+        $msgsDone = $this->dispatchCachedMessages($messages);
+
+
+        $this->active = true;
+
+        if ($msgsDone < $messages) {
+
+            $messagesLeft = $messages - $msgsDone;
+
+            $quota = $this->processedMessages + $messagesLeft;
+
+            while(NatsHelper::socketInGoodHealth($this->stanCon->natsCon()) && $this->active) {
+
+                $this->stanCon->natsCon()->wait(1);
+
+                if ($this->processedMessages >= $quota) {
+                    break;
+                }
+            }
+
+        }
+
+        $this->active = false;
     }
 
 }
