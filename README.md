@@ -61,6 +61,31 @@ $r->wait();
 $c->close();
 
 ```
+
+#### Note
+
+If publishing many messages at a time, you might at first do this:
+
+```php
+foreach ($req as $data){
+    $r = $c->publish(...);
+    $r->wait();
+}
+```
+
+It's actually *much* faster to do the following:
+
+```php
+$rs = [];
+foreach ($req as $data){
+    $rs[] = $c->publish(...);
+}
+
+foreach ($rs as $r){
+    $r->wait();
+}
+```
+
 ### Subscribe
 ```php
 $options = new \NatsStreaming\ConnectionOptions();
