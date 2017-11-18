@@ -435,6 +435,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $r = $this->c->publish($subject, 'foobar' );
         $r->wait();
 
+        $sub->wait(1);
+
         $this->assertEquals(1, $got);
 
         if ($close) {

@@ -83,7 +83,6 @@ class Subscription
             $this->processMsg($message);
         });
 
-
         $subRequest = new SubscriptionRequest();
         $subRequest->setSubject($this->getSubject());
         $subRequest->setClientID($this->stanCon->options->getClientID());
@@ -305,7 +304,6 @@ class Subscription
     private function processMsg($rawMessage)
     {
 
-        error_log('process sub');
 
         $newMessage = Msg::fromStream($rawMessage->getBody());
 

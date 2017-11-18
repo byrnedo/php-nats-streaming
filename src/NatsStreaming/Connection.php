@@ -90,11 +90,6 @@ class Connection
     private $timeout;
 
     /**
-     * @var MessageCache
-     */
-    private $witness;
-
-    /**
      * Connection constructor.
      * @param ConnectionOptions|null $options
      */
@@ -114,7 +109,6 @@ class Connection
             $this->randomGenerator = $randomFactory->getLowStrengthGenerator();
         }
 
-        $this->witness = new MessageCache();
         $this->natsCon = new \Nats\Connection($this->options->getNatsOptions());
     }
 
@@ -199,7 +193,7 @@ class Connection
     public function publish($subject, $data)
     {
 
-        $subject = $this->pubPrefix . '.' . $subject;
+        $natsSubject = $this->pubPrefix . '.' . $subject;
         $peGUID = $this->randomGenerator->generateString(self::UID_LENGTH);
 
         $req = new PubMsg();
@@ -213,7 +207,7 @@ class Connection
         $ackSubject = NatsHelper::newInboxSubject(self::DEFAULT_ACK_PREFIX . '.');
 
 
-        $natsReq = new TrackedNatsRequest($this->natsCon(), $subject, $bytes, function($message){
+        $natsReq = new TrackedNatsRequest($this->natsCon(), $natsSubject, $bytes, function($message){
             /**
              * @var $message Message
              */
