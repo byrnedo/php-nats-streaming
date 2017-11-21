@@ -3,6 +3,7 @@
 $scriptDir = realpath(dirname(__FILE__));
 require_once($scriptDir . '/../../../vendor/autoload.php');
 
+global $argv;
 $clientId = $argv[1];
 $subject = $argv[2];
 $numMessages = $argv[3];
