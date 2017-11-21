@@ -30,12 +30,12 @@ class MultipleConsumerTest extends PHPUnit_Framework_TestCase
 
     private function runConsumer($clientId, $subject, $expectMessages,$durableName) {
         $scriptDir = realpath(dirname(__FILE__));
-        return $this->runScript($scriptDir . '/Commands/Consumer.php', [$clientId, $subject, $expectMessages, $durableName]);
+        return $this->runScript($scriptDir . '/Commands/Consumer', [$clientId, $subject, $expectMessages, $durableName]);
     }
 
     private function runProducer($clientId, $subject, $pubMessages) {
         $scriptDir = realpath(dirname(__FILE__));
-        return $this->runScript($scriptDir . '/Commands/Producer.php', [$clientId, $subject, $pubMessages]);
+        return $this->runScript($scriptDir . '/Commands/Producer', [$clientId, $subject, $pubMessages]);
     }
 
     public function testMultipleConsumers(){
