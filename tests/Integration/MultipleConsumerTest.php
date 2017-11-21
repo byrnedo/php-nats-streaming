@@ -44,7 +44,6 @@ class MultipleConsumerTest extends PHPUnit_Framework_TestCase
         $numMessages = 10;
 
         // run consumer 1
-
         $logCon1 = $this->runConsumer(uniqid(), $subject, $numMessages, '');
 
         // run consumer 2
@@ -55,10 +54,8 @@ class MultipleConsumerTest extends PHPUnit_Framework_TestCase
         // run producer
         $logProd = $this->runProducer(uniqid(), $subject, $numMessages);
 
-
         // wait for processes to finish
         sleep(1);
-
 
         $this->checkConsumer($logCon1, $numMessages);
         $this->checkConsumer($logCon2, $numMessages);
@@ -97,7 +94,7 @@ class MultipleConsumerTest extends PHPUnit_Framework_TestCase
         // wait for processes to finish
         sleep(1);
 
-        $this->checkConsumer($logCon2, 1);
+        $this->checkConsumer($logCon2, $numMessages +1);
         $this->checkProducer($logProd2, 1);
 
     }
@@ -107,13 +104,10 @@ class MultipleConsumerTest extends PHPUnit_Framework_TestCase
 
     }
 
-    private function checkConsumer($log, $messages) {
-
+    private function checkConsumer($log, $maxSeq) {
         $data=file_get_contents($log);
         $count = trim($data);
-
-        $this->assertEquals($messages, $count);
-
+        $this->assertEquals($maxSeq, $count);
     }
 
     protected function tearDown()

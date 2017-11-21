@@ -22,8 +22,16 @@ if ($durableName) {
     $subOpts->setDurableName($durableName);
 }
 $count = 0;
-$sub = $con->subscribe($subject, function($message)use(&$count){
+$maxSeq = 0;
+
+$sub = $con->subscribe($subject, function($message)use(&$count, &$maxSeq){
+    /**
+     * @var $message \NatsStreaming\Msg
+     */
     $count ++;
+    if ($message->getSequence() > $maxSeq) {
+        $maxSeq = $message->getSequence();
+    }
 }, $subOpts);
 
 $sub->wait($numMessages);
@@ -35,4 +43,4 @@ if ($count != $numMessages) {
 
 $con->close();
 
-echo "${count}\n";
+echo "${maxSeq}\n";
