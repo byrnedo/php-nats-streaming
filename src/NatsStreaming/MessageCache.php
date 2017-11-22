@@ -2,14 +2,14 @@
 
 namespace NatsStreaming;
 
-
 class MessageCache
 {
 
 
     private static $msgsBySidMap = null;
 
-    public static function popMessages($sid, $numMessages = 0){
+    public static function popMessages($sid, $numMessages = 0)
+    {
         if (!isset(self::$msgsBySidMap[$sid])) {
             return [];
         }
@@ -25,13 +25,12 @@ class MessageCache
     }
 
 
-    public static function pushMessage($sid, $msg) {
+    public static function pushMessage($sid, $msg)
+    {
         if (!is_array(self::$msgsBySidMap)) {
             self::$msgsBySidMap = [];
         }
 
         self::$msgsBySidMap[$sid][] = $msg;
     }
-
-
 }

@@ -2,11 +2,11 @@
 
 namespace NatsStreaming;
 
-
 use Nats\Message;
 use NatsStreaming\Helpers\NatsHelper;
 
-class TrackedNatsRequest {
+class TrackedNatsRequest
+{
     private $sid;
     /**
      * @var Connection
@@ -36,14 +36,14 @@ class TrackedNatsRequest {
     public function __construct($stanCon, $subject, $data, $cb, $replyInbox = null)
     {
 
-        if (! $replyInbox ) {
+        if (! $replyInbox) {
             $replyInbox = NatsHelper::newInboxSubject();
         }
         $this->cb = $cb;
         $this->stanCon = $stanCon;
         $natsCon = $stanCon->natsCon();
 
-        $this->sid = $natsCon->subscribe($replyInbox , function ($newMessage) use (&$resp, &$cb) {
+        $this->sid = $natsCon->subscribe($replyInbox, function ($newMessage) use (&$resp, &$cb) {
             /**
              * @var $message Message
              */
@@ -53,23 +53,23 @@ class TrackedNatsRequest {
                 if ($cb != null) {
                     $cb($newMessage);
                     $this->consumed = true;
-
                 }
             } else {
                 MessageCache::pushMessage($message->getSid(), $newMessage);
             }
         });
-        $natsCon->unsubscribe($this->sid,1);
+        $natsCon->unsubscribe($this->sid, 1);
         $natsCon->publish($subject, $data, $replyInbox);
     }
 
 
-    private function dispatchCachedMessages() {
+    private function dispatchCachedMessages()
+    {
 
         $cb = $this->cb;
         $cachedMsgs = MessageCache::popMessages($this->getSid());
         if ($cachedMsgs) {
-            foreach($cachedMsgs as $msg) {
+            foreach ($cachedMsgs as $msg) {
                 $cb($msg);
             }
             // should only get 1 so get out
@@ -77,11 +77,11 @@ class TrackedNatsRequest {
         }
 
         return false;
-
     }
 
 
-    public function wait(){
+    public function wait()
+    {
 
         if ($this->consumed) {
             return;
@@ -93,9 +93,9 @@ class TrackedNatsRequest {
             $this->waiting = true;
 
             $quota = $this->receivedCount + 1;
-            while(NatsHelper::socketInGoodHealth($this->stanCon->natsCon()) && $this->waiting) {
+            while (NatsHelper::socketInGoodHealth($this->stanCon->natsCon()) && $this->waiting) {
                 $this->stanCon->natsCon()->wait(1);
-                if ($this->receivedCount  >= $quota ) {
+                if ($this->receivedCount  >= $quota) {
                     break;
                 }
             }
@@ -112,4 +112,3 @@ class TrackedNatsRequest {
         return $this->sid;
     }
 }
-

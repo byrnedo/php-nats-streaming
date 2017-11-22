@@ -16,7 +16,6 @@ class PublishException extends Exception
      */
     public function __construct($message = "error while publishing", $code = 0, Throwable $previous = null)
     {
-        return parent::__construct($message,$code, $previous);
+        return parent::__construct($message, $code, $previous);
     }
-
 }

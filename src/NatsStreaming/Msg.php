@@ -3,7 +3,6 @@
 
 namespace NatsStreaming;
 
-
 use NatsStreamingProtos\Ack;
 use NatsStreamingProtos\MsgProto;
 use Protobuf\Configuration;
@@ -57,5 +56,4 @@ class Msg extends MsgProto
         $stanCon = $this->sub->getStanCon();
         $stanCon->natsCon()->publish($this->sub->getAckInbox(), $data);
     }
-
 }

@@ -3,7 +3,8 @@
 class SubscriptionOptionsTest extends \PHPUnit_Framework_TestCase
 {
 
-    public function testConstructor(){
+    public function testConstructor()
+    {
 
         $opts = new \NatsStreaming\SubscriptionOptions([
             'durableName' => 'foo',
@@ -21,7 +22,5 @@ class SubscriptionOptionsTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(\NatsStreamingProtos\StartPosition::SequenceStart()->value(), $opts->getStartAt()->value());
         $this->assertEquals(100, $opts->getStartSequence());
         $this->assertEquals(true, $opts->isManualAck());
-
     }
-
 }

@@ -3,7 +3,8 @@
 class ConnectionOptionsTest extends \PHPUnit_Framework_TestCase
 {
 
-    public function testConstructor(){
+    public function testConstructor()
+    {
 
         $opts = new \NatsStreaming\ConnectionOptions([
             'discoverPrefix' => 'foo',
@@ -19,5 +20,4 @@ class ConnectionOptionsTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals('hosty', $opts->getNatsOptions()->getHost());
     }
-
 }

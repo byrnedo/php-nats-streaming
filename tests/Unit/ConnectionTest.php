@@ -31,7 +31,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     }
 
 
-    public function testUnixNanos(){
+    public function testUnixNanos()
+    {
         $timeAsNanos = \NatsStreaming\Helpers\TimeHelpers::unixTimeNanos();
 
         sleep(1);
@@ -47,8 +48,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $timeNowNanos = \NatsStreaming\Helpers\TimeHelpers::unixTimeNanos();
         $timeNowSeconds = time();
-        $this->assertEquals($timeNowSeconds,(int)($timeNowNanos / 1000000000));
-
+        $this->assertEquals($timeNowSeconds, (int)($timeNowNanos / 1000000000));
     }
     /**
      * Test Connection.
@@ -142,7 +142,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c->close();
     }
 
-    public function testGlobalWait(){
+    public function testGlobalWait()
+    {
 
         $this->c->reconnect();
 
@@ -193,7 +194,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c->close();
     }
 
-    public function testMultipleSubscriptions(){
+    public function testMultipleSubscriptions()
+    {
 
         $this->c->reconnect();
 
@@ -227,7 +229,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $rs[] = $this->c->publish($subject, 'foobar' . $i);
         }
 
-        foreach($rs as $r) {
+        foreach ($rs as $r) {
             $r->wait(1);
         }
 
@@ -245,7 +247,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     /**
      * Test durable sub. Should pick up where it left off in case of a $sub->close or a $c->close
      */
-    public function testDurableSubscription(){
+    public function testDurableSubscription()
+    {
         $this->c->reconnect();
 
         $toSend = 100;
@@ -275,7 +278,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $rs[] = $this->c->publish($subject, 'foobar' . $i);
         }
 
-        foreach($rs as $r) {
+        foreach ($rs as $r) {
             $r->wait();
         }
 
@@ -310,12 +313,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(1, $got);
 
         $this->c->close();
-
     }
 
     /**
      */
-    public function testMultipleDurableSubscription(){
+    public function testMultipleDurableSubscription()
+    {
         $this->c->reconnect();
 
         $toSend = 100;
@@ -363,7 +366,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         // quicker
-        foreach($rs as $r) {
+        foreach ($rs as $r) {
             $r->wait();
         }
 
@@ -415,17 +418,16 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c->close();
         try {
             $c2->close();
-        } catch(\NatsStreaming\Exceptions\DisconnectException $e) {
-
+        } catch (\NatsStreaming\Exceptions\DisconnectException $e) {
             $this->assertEquals('stan: unknown clientID', $e->getMessage());
         }
-
     }
 
     /**
      * Test Queue Group Subscriptions
      */
-    public function testQueueGroupSubscribe(){
+    public function testQueueGroupSubscribe()
+    {
 
         $this->c->reconnect();
 
@@ -449,7 +451,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $rs[] = $this->c->publish($subject, 'foobar' . $i);
         }
 
-        foreach($rs as $r) {
+        foreach ($rs as $r) {
             $r->wait();
         }
 
@@ -465,7 +467,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
      * Test unsubscribing from channel
      * @param bool $close
      */
-    public function testUnsubscribe($close = false){
+    public function testUnsubscribe($close = false)
+    {
 
         $this->c->connect();
 
@@ -483,7 +486,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $this->assertEquals('foobar', $message->getData());
         }, $subOptions);
 
-        $r = $this->c->publish($subject, 'foobar' );
+        $r = $this->c->publish($subject, 'foobar');
         $r->wait();
 
         $sub->wait(1);
@@ -497,17 +500,17 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         $this->c->natsCon->setStreamTimeout(5);
-        $r = $this->c->publish($subject, 'foobar' );
+        $r = $this->c->publish($subject, 'foobar');
         $r->wait();
 
 
         $this->assertEquals(1, $got);
 
         $this->c->close();
-
     }
 
-    public function testSubscriptionClose() {
+    public function testSubscriptionClose()
+    {
 
         $this->testUnsubscribe(true);
     }

@@ -71,7 +71,7 @@ class Subscription
         $this->qGroup = $qGroup;
         $this->inbox = $inbox;
         $this->opts = $opts;
-        $this->cb = function($message)use($msgCb){
+        $this->cb = function ($message) use ($msgCb) {
             $this->processedMessages ++;
             $msgCb($message);
         };
@@ -96,7 +96,6 @@ class Subscription
                 $subRequest->setStartSequence($this->opts->getStartSequence());
                 break;
             case StartPosition::TimeDeltaStart_VALUE:
-
                 $nowNano = TimeHelpers::unixTimeNanos();
                 $subRequest->setStartTimeDelta($nowNano - $this->opts->getStartMicroTime() * 1000);
                 break;
@@ -114,7 +113,6 @@ class Subscription
             });
 
             $natsReq->wait();
-
         } catch (\Exception $e) {
             $this->stanCon->natsCon()->unsubscribe($this->getSid());
             throw $e;
@@ -132,7 +130,6 @@ class Subscription
 
 
         $this->setAckInbox($resp->getAckInbox());
-
     }
 
 
@@ -232,7 +229,8 @@ class Subscription
      * the server. Restarting a durable with the same name will not resume
      * the subscription, it will be considered a new one.
      */
-    public function unsubscribe(){
+    public function unsubscribe()
+    {
 
         $this->closeOrUnsubscribe(false);
     }
@@ -243,10 +241,10 @@ class Subscription
      * for which this feature is not available, Close() will return a ErrNoServerSupport
      * error.
      */
-    public function close() {
+    public function close()
+    {
 
         $this->closeOrUnsubscribe(true);
-
     }
 
     /**
@@ -255,7 +253,8 @@ class Subscription
      * @throws TimeoutException
      * @throws UnsubscribeException
      */
-    private function closeOrUnsubscribe($doClose) {
+    private function closeOrUnsubscribe($doClose)
+    {
 
         $this->stanCon->natsCon()->unsubscribe($this->sid);
 
@@ -279,7 +278,7 @@ class Subscription
          */
         $resp = null;
 
-        $natsReq = new TrackedNatsRequest($this->stanCon, $reqSubject, $req->toStream()->getContents(), function($message) use (&$resp) {
+        $natsReq = new TrackedNatsRequest($this->stanCon, $reqSubject, $req->toStream()->getContents(), function ($message) use (&$resp) {
             /**
              * @var $message Message
              */
@@ -326,18 +325,18 @@ class Subscription
         }
     }
 
-    public function dispatchCachedMessages($messages = 0) {
+    public function dispatchCachedMessages($messages = 0)
+    {
 
         $cachedMsgs = MessageCache::popMessages($this->getSid(), $messages);
         $msgsDone = 0;
 
-        if ($cachedMsgs){
+        if ($cachedMsgs) {
             $cb = $this->getCb();
-            foreach($cachedMsgs as $msg) {
+            foreach ($cachedMsgs as $msg) {
                 $cb($msg);
                 $msgsDone ++;
             }
-
         }
 
         return $msgsDone;
@@ -353,23 +352,19 @@ class Subscription
         $this->active = true;
 
         if ($msgsDone < $messages) {
-
             $messagesLeft = $messages - $msgsDone;
 
             $quota = $this->processedMessages + $messagesLeft;
 
-            while(NatsHelper::socketInGoodHealth($this->stanCon->natsCon()) && $this->active) {
-
+            while (NatsHelper::socketInGoodHealth($this->stanCon->natsCon()) && $this->active) {
                 $this->stanCon->natsCon()->wait(1);
 
                 if ($this->processedMessages >= $quota) {
                     break;
                 }
             }
-
         }
 
         $this->active = false;
     }
-
 }
