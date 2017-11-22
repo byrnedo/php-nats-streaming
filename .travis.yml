@@ -12,6 +12,7 @@ cache:
    - $HOME/.composer/cache
 before_install:
   - docker run -d -p 4222:4222 --name nats-streaming nats-streaming
+  - sleep 1
 before_script:
   - make dist-clean
   - make deps
