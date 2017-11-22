@@ -150,7 +150,9 @@ class Connection
         $this->timeout      = $timeout;
         $hbInbox = NatsHelper::newInboxSubject();
 
-        $this->natsCon->subscribe($hbInbox, function($message) { $this->processHeartbeat($message);});
+        $this->natsCon->subscribe($hbInbox, function ($message) {
+            $this->processHeartbeat($message);
+        });
 
         $discoverPrefix = $this->options->getDiscoverPrefix() ? $this->options->getDiscoverPrefix() : self::DEFAULT_DISCOVER_PREFIX;
 
@@ -219,7 +221,7 @@ class Connection
         $ackSubject = NatsHelper::newInboxSubject(self::DEFAULT_ACK_PREFIX . '.');
 
 
-        $natsReq = new TrackedNatsRequest($this, $natsSubject, $bytes, function($message){
+        $natsReq = new TrackedNatsRequest($this, $natsSubject, $bytes, function ($message) {
             /**
              * @var $message Message
              */
@@ -402,7 +404,8 @@ class Connection
     /**
      * Wait until timeout. Dispatches any pending messages first.
      */
-    public function wait() {
+    public function wait()
+    {
         $this->waiting = true;
         foreach ($this->subs as $sub) {
             /**
@@ -453,6 +456,4 @@ class Connection
             $this->close();
         }
     }
-
-
 }

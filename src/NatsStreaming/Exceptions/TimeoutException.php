@@ -16,6 +16,6 @@ class TimeoutException extends Exception
      */
     public function __construct($message = "timeout occured waiting for response", $code = 0, Throwable $previous = null)
     {
-        return parent::__construct($message,$code, $previous);
+        return parent::__construct($message, $code, $previous);
     }
 }
