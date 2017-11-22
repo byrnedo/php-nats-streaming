@@ -142,6 +142,57 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c->close();
     }
 
+    public function testGlobalWait(){
+
+        $this->c->reconnect();
+
+        $toSend = 100;
+
+        $subject = 'test.globalwait.'.uniqid();
+
+        $subOptions = new \NatsStreaming\SubscriptionOptions();
+
+        $subOptions->setStartAt(StartPosition::First());
+
+
+        $rs = [];
+        for ($i = 0; $i < $toSend; $i++) {
+            $rs[] = $this->c->publish($subject, 'foobar' . $i);
+        }
+
+        foreach ($rs as $r) {
+            $r->wait();
+        }
+
+
+        $got1 = 0;
+        $sub = $this->c->subscribe($subject, function ($message) use (&$got1) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($got1 + 1, $message->getSequence());
+            $got1 ++;
+        }, $subOptions);
+
+        $got2 = 0;
+        $sub2 = $this->c->subscribe($subject, function ($message) use (&$got2) {
+            /**
+             * @var $message MsgProto
+             */
+            $this->assertEquals($got2 + 1, $message->getSequence());
+            $got2 ++;
+        }, $subOptions);
+
+
+        $this->c->natsCon()->setStreamTimeout(3);
+        $this->c->wait();
+
+        $this->assertEquals($toSend, $got1);
+        $this->assertEquals($toSend, $got2);
+
+        $this->c->close();
+    }
+
     public function testMultipleSubscriptions(){
 
         $this->c->reconnect();

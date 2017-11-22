@@ -9,11 +9,14 @@ use NatsStreaming\Helpers\NatsHelper;
 class TrackedNatsRequest {
     private $sid;
     /**
-     * @var \Nats\Connection
+     * @var Connection
      */
-    private $natsCon;
+    private $stanCon;
 
-    private $active = false;
+    private $waiting = false;
+
+
+    private $consumed = false;
 
     /**
      * @var callable
@@ -24,28 +27,33 @@ class TrackedNatsRequest {
 
     /**
      * TrackedNatsSub constructor.
-     * @param $natsCon \Nats\Connection
+     * @param $stanCon Connection
      * @param $subject
      * @param $data
      * @param $cb
      * @param null|string $replyInbox
      */
-    public function __construct($natsCon, $subject, $data, $cb, $replyInbox = null)
+    public function __construct($stanCon, $subject, $data, $cb, $replyInbox = null)
     {
 
         if (! $replyInbox ) {
             $replyInbox = NatsHelper::newInboxSubject();
         }
         $this->cb = $cb;
-        $this->natsCon = $natsCon;
+        $this->stanCon = $stanCon;
+        $natsCon = $stanCon->natsCon();
+
         $this->sid = $natsCon->subscribe($replyInbox , function ($newMessage) use (&$resp, &$cb) {
             /**
              * @var $message Message
              */
             $this->receivedCount ++;
-            if ($this->active) {
+            $consumeNow = $this->waiting || $this->stanCon->isWaiting();
+            if ($consumeNow) {
                 if ($cb != null) {
                     $cb($newMessage);
+                    $this->consumed = true;
+
                 }
             } else {
                 MessageCache::pushMessage($message->getSid(), $newMessage);
@@ -75,21 +83,25 @@ class TrackedNatsRequest {
 
     public function wait(){
 
+        if ($this->consumed) {
+            return;
+        }
+
         if ($this->dispatchCachedMessages()) {
             return;
         } else {
-            $this->active = true;
+            $this->waiting = true;
 
             $quota = $this->receivedCount + 1;
-            while(NatsHelper::socketInGoodHealth($this->natsCon) && $this->active) {
-                $this->natsCon->wait(1);
+            while(NatsHelper::socketInGoodHealth($this->stanCon->natsCon()) && $this->waiting) {
+                $this->stanCon->natsCon()->wait(1);
                 if ($this->receivedCount  >= $quota ) {
                     break;
                 }
             }
         }
 
-        $this->active = false;
+        $this->waiting = false;
     }
 
     /**

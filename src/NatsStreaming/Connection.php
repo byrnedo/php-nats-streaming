@@ -89,6 +89,18 @@ class Connection
      */
     private $timeout;
 
+
+    /**
+     * @var bool
+     */
+    private $waiting;
+
+
+    /**
+     * @var array
+     */
+    private $subs = [];
+
     /**
      * Connection constructor.
      * @param ConnectionOptions|null $options
@@ -154,7 +166,7 @@ class Connection
          */
         $resp = null;
 
-        $req = new TrackedNatsRequest($this->natsCon(), $discoverSubject, $data, function ($message) use (&$resp) {
+        $req = new TrackedNatsRequest($this, $discoverSubject, $data, function ($message) use (&$resp) {
             $resp = ConnectResponse::fromStream($message->getBody());
         });
 
@@ -207,7 +219,7 @@ class Connection
         $ackSubject = NatsHelper::newInboxSubject(self::DEFAULT_ACK_PREFIX . '.');
 
 
-        $natsReq = new TrackedNatsRequest($this->natsCon(), $natsSubject, $bytes, function($message){
+        $natsReq = new TrackedNatsRequest($this, $natsSubject, $bytes, function($message){
             /**
              * @var $message Message
              */
@@ -270,7 +282,7 @@ class Connection
             $this
         );
 
-        $sub->subscribe();
+        $this->subs[] = $sub;
 
         return $sub;
     }
@@ -369,7 +381,7 @@ class Connection
          */
         $resp = null;
         $reqBody  = $req->toStream()->getContents();
-        $req = new TrackedNatsRequest($this->natsCon(), $this->closeRequests, $reqBody, function ($message) use (&$resp) {
+        $req = new TrackedNatsRequest($this, $this->closeRequests, $reqBody, function ($message) use (&$resp) {
             /**
              * @var $message Message
              */
@@ -386,6 +398,23 @@ class Connection
         $this->natsCon->close();
     }
 
+
+    /**
+     * Wait until timeout. Dispatches any pending messages first.
+     */
+    public function wait() {
+        $this->waiting = true;
+        foreach ($this->subs as $sub) {
+            /**
+             * @var $sub Subscription
+             */
+            $sub->dispatchCachedMessages();
+        }
+        $this->natsCon->wait();
+        $this->waiting = false;
+    }
+
+
     /**
      * Underlying nats connection
      *
@@ -394,6 +423,24 @@ class Connection
     public function natsCon()
     {
         return $this->natsCon;
+    }
+
+
+
+    /**
+     * @return string
+     */
+    public function getSubRequests()
+    {
+        return $this->subRequests;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isWaiting()
+    {
+        return $this->waiting;
     }
 
     /**
@@ -407,14 +454,5 @@ class Connection
         }
     }
 
-
-
-    /**
-     * @return string
-     */
-    public function getSubRequests()
-    {
-        return $this->subRequests;
-    }
 
 }

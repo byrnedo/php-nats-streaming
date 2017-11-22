@@ -61,6 +61,9 @@ class Subscription
      * @param $opts
      * @param $msgCb
      * @param $stanCon
+     * @throws Exception
+     * @throws SubscribeException
+     * @throws TimeoutException
      */
     public function __construct($subject, $qGroup, $inbox, $opts, $msgCb, $stanCon)
     {
@@ -74,10 +77,6 @@ class Subscription
         };
 
         $this->stanCon = $stanCon;
-
-    }
-
-    public function subscribe(){
 
         $this->sid = $this->stanCon->natsCon()->subscribe($this->getInbox(), function ($message) {
             $this->processMsg($message);
@@ -110,7 +109,7 @@ class Subscription
          */
         $resp = null;
         try {
-            $natsReq = new TrackedNatsRequest($this->stanCon->natsCon(), $this->stanCon->getSubRequests(), $data, function ($message) use (&$resp) {
+            $natsReq = new TrackedNatsRequest($this->stanCon, $this->stanCon->getSubRequests(), $data, function ($message) use (&$resp) {
                 $resp = SubscriptionResponse::fromStream($message->getBody());
             });
 
@@ -133,7 +132,9 @@ class Subscription
 
 
         $this->setAckInbox($resp->getAckInbox());
+
     }
+
 
     /**
      * @return mixed
@@ -278,7 +279,7 @@ class Subscription
          */
         $resp = null;
 
-        $natsReq = new TrackedNatsRequest($this->stanCon->natsCon(), $reqSubject, $req->toStream()->getContents(), function($message) use (&$resp) {
+        $natsReq = new TrackedNatsRequest($this->stanCon, $reqSubject, $req->toStream()->getContents(), function($message) use (&$resp) {
             /**
              * @var $message Message
              */
@@ -304,13 +305,14 @@ class Subscription
     private function processMsg($rawMessage)
     {
 
-
         $newMessage = Msg::fromStream($rawMessage->getBody());
 
         // smuggle ack subject
         $newMessage->setSub($this);
 
-        if ($this->active) {
+        $consumeNow = $this->active || $this->stanCon->isWaiting();
+
+        if ($consumeNow) {
             $cb = $this->getCb();
             $cb($newMessage);
         } else {
@@ -324,7 +326,7 @@ class Subscription
         }
     }
 
-    private function dispatchCachedMessages($messages) {
+    public function dispatchCachedMessages($messages = 0) {
 
         $cachedMsgs = MessageCache::popMessages($this->getSid(), $messages);
         $msgsDone = 0;
@@ -334,10 +336,6 @@ class Subscription
             foreach($cachedMsgs as $msg) {
                 $cb($msg);
                 $msgsDone ++;
-
-                if ($msgsDone >= $messages) {
-                    break;
-                }
             }
 
         }

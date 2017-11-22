@@ -108,6 +108,26 @@ $sub->unsubscribe(); // or $sub->close();
 $c->close();
 
 ```
+
+If you want to subscribe to multiple channels you can use `$c->wait()`:
+
+```php
+...
+
+$c->connect();
+
+...
+
+$sub = $c->subscribe('special.subject', function ($message) {
+    // implement
+}, $subOptions);
+$sub2 = $c->subscribe('special.subject', function ($message) {
+    // implement
+}, $subOptions);
+
+$c->wait();
+```
+
 ### Queue Group Subscribe
 ```php
 $options = new \NatsStreaming\ConnectionOptions();
