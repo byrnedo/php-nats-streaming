@@ -30,18 +30,25 @@ $sub = $con->subscribe($subject, function($message)use(&$count, &$maxSeq){
      * @var $message \NatsStreaming\Msg
      */
     $count ++;
+    echo "count : $count\n";
     if ($message->getSequence() > $maxSeq) {
         $maxSeq = $message->getSequence();
+        echo "new max : $maxSeq\n";
     }
 }, $subOpts);
 
+
 $sub->wait($numMessages);
+
+echo "total count : $count\n";
+echo "max : $maxSeq\n";
+
+$con->close();
 
 if ($count != $numMessages) {
     error_log('ERROR: expected ' . $numMessages . ', got ' . $count);
     die(2);
 }
 
-$con->close();
 
 echo "${maxSeq}\n";

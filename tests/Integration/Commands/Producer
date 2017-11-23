@@ -21,8 +21,11 @@ $count = 0;
 for(; $count < $numMessages;  $count++) {
     $ack = $con->publish($subject, 'foobar '.$count);
     $ack->wait();
+    echo "count : $count\n";
 }
 
+
+echo "total count : $count\n";
 
 $con->close();
 

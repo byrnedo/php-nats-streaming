@@ -111,9 +111,10 @@ class MultipleConsumerTest extends PHPUnit_Framework_TestCase
 
     private function checkConsumer($log, $maxSeq)
     {
-        $data=file_get_contents($log);
-        $count = trim($data);
-        $this->assertEquals($maxSeq, $count);
+        $data=file($log);
+        $lastLine=@$data[count($data)-1];
+        $count = trim($lastLine);
+        $this->assertEquals($maxSeq, $count, "$maxSeq did not equal expected $count. Log: " . implode("", $data));
     }
 
     protected function tearDown()
