@@ -75,7 +75,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     {
         $this->c->reconnect();
         $r = $this->c->publish('foo', 'bar');
-        $r->wait();
+        $ack = $r->wait();
+        $this->assertTrue($ack);
         $count = $this->c->pubsCount();
         $this->assertInternalType('int', $count);
         $this->assertGreaterThan(0, $count);
@@ -121,7 +122,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         foreach ($rs as $r) {
-            $r->wait();
+            $gotAck = $r->wait();
+            $this->assertTrue($gotAck);
         }
 
 
@@ -162,7 +164,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         foreach ($rs as $r) {
-            $r->wait();
+            $gotAck = $r->wait();
+            $this->assertTrue($gotAck);
         }
 
 
@@ -230,7 +233,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         foreach ($rs as $r) {
-            $r->wait(1);
+            $gotAck = $r->wait(1);
+            $this->assertTrue($gotAck);
         }
 
 
@@ -279,7 +283,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         foreach ($rs as $r) {
-            $r->wait();
+            $gotAck = $r->wait();
+            $this->assertTrue($gotAck);
         }
 
         $sub->wait($toSend);
@@ -290,7 +295,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->connect();
         $r = $this->c->publish($subject, 'foobarnew');
-        $r->wait();
+        $gotAck = $r->wait();
+        $this->assertTrue($gotAck);
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
@@ -367,7 +373,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         // quicker
         foreach ($rs as $r) {
-            $r->wait();
+            $gotAck = $r->wait();
+            $this->assertTrue($gotAck);
         }
 
         $sub1->wait($toSend);
@@ -381,7 +388,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->c->connect();
 
         $r = $this->c->publish($subject, 'foobarnew');
-        $r->wait();
+        $gotAck = $r->wait();
+        $this->assertTrue($gotAck);
 
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
@@ -452,7 +460,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }
 
         foreach ($rs as $r) {
-            $r->wait();
+            $gotAck = $r->wait();
+            $this->assertTrue($gotAck);
         }
 
         $sub->wait($toSend);
@@ -487,7 +496,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }, $subOptions);
 
         $r = $this->c->publish($subject, 'foobar');
-        $r->wait();
+        $gotAck = $r->wait();
+        $this->assertTrue($gotAck);
 
         $sub->wait(1);
 
@@ -501,7 +511,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
         $this->c->natsCon->setStreamTimeout(5);
         $r = $this->c->publish($subject, 'foobar');
-        $r->wait();
+        $gotAck = $r->wait();
+        $this->assertTrue($gotAck);
 
 
         $this->assertEquals(1, $got);

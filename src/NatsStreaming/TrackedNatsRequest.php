@@ -71,6 +71,7 @@ class TrackedNatsRequest
         if ($cachedMsgs) {
             foreach ($cachedMsgs as $msg) {
                 $cb($msg);
+                $this->consumed = true;
             }
             // should only get 1 so get out
             return true;
@@ -79,16 +80,19 @@ class TrackedNatsRequest
         return false;
     }
 
+    public function gotAck() {
+        return $this->consumed > 0;
+    }
 
     public function wait()
     {
 
         if ($this->consumed) {
-            return;
+            return $this->gotAck();
         }
 
         if ($this->dispatchCachedMessages()) {
-            return;
+            return $this->gotAck();
         } else {
             $this->waiting = true;
 
@@ -102,7 +106,9 @@ class TrackedNatsRequest
         }
 
         $this->waiting = false;
+        return $this->gotAck();
     }
+
 
     /**
      * @return mixed

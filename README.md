@@ -56,7 +56,10 @@ $c->connect();
 $r = $c->publish('special.subject', 'some serialized payload...');
 
 // optionally wait for the ack
-$r->wait();
+$gotAck = $r->wait();
+if (!$gotAck) {
+    ...
+}
 
 $c->close();
 
@@ -69,7 +72,10 @@ If publishing many messages at a time, you might at first do this:
 ```php
 foreach ($req as $data){
     $r = $c->publish(...);
-    $r->wait();
+    $gotAck = $r->wait();
+    if (!$gotAck) {
+        ...
+    }
 }
 ```
 

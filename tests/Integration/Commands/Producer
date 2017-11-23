@@ -20,8 +20,11 @@ $subOpts = new \NatsStreaming\SubscriptionOptions();
 $count = 0;
 for(; $count < $numMessages;  $count++) {
     $ack = $con->publish($subject, 'foobar '.$count);
-    $ack->wait();
+    $gotAck = $ack->wait();
     echo "count : $count\n";
+    if (!$gotAck) {
+        error_log("ERROR: failed to get ACK");
+    }
 }
 
 
