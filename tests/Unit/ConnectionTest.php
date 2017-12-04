@@ -116,6 +116,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $subOptions->setStartAt(StartPosition::First());
 
 
+        // we'll only check the ack for this after all the others
         $latePubAckScenario = $this->c->publish($subject, 'foobar');
         $rs = [];
         for ($i = 0; $i < $toSend; $i++) {
