@@ -45,7 +45,7 @@ class TrackedNatsRequest
 
         $this->sid = $natsCon->subscribe($replyInbox, function ($newMessage) use (&$resp, &$cb) {
             /**
-             * @var $message Message
+             * @var $newMessage Message
              */
             $this->receivedCount ++;
             $consumeNow = $this->waiting || $this->stanCon->isWaiting();
@@ -55,7 +55,7 @@ class TrackedNatsRequest
                     $this->consumed = true;
                 }
             } else {
-                MessageCache::pushMessage($message->getSid(), $newMessage);
+                MessageCache::pushMessage($newMessage->getSid(), $newMessage);
             }
         });
         $natsCon->unsubscribe($this->sid, 1);
