@@ -116,6 +116,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $subOptions->setStartAt(StartPosition::First());
 
 
+        $latePubAckScenario = $this->c->publish($subject, 'foobar');
         $rs = [];
         for ($i = 0; $i < $toSend; $i++) {
             $rs[] = $this->c->publish($subject, 'foobar' . $i);
@@ -125,6 +126,8 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $gotAck = $r->wait();
             $this->assertTrue($gotAck);
         }
+
+        // one more publish, check that this get's cached
 
 
         $got = 0;
@@ -137,9 +140,13 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         }, $subOptions);
 
 
-        $sub->wait($toSend);
+        $sub->wait($toSend + 1);
 
-        $this->assertEquals($toSend, $got);
+
+        $ack = $latePubAckScenario->wait();
+        $this->assertTrue($ack);
+
+        $this->assertEquals($toSend + 1, $got);
 
         $this->c->close();
     }
