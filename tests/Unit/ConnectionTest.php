@@ -445,26 +445,45 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
     public function testQueueGroupSubscribe()
     {
 
-        $this->c->reconnect();
-
         $subject = 'test.subscribe.qgroup.' . uniqid();
+        $group = 'testQueueGroup';
+        $toSend = 100;
+
+        $c1 = $this->c;
+
+        $options = new ConnectionOptions();
+        $options->setClientID("test-2");
+        $options->setClusterID("test-cluster");
+        $c2 = new Connection($options);
+
+        $c1->reconnect();
+        $c2->connect();
 
         $subOptions = new \NatsStreaming\SubscriptionOptions();
 
-        $toSend = 100;
 
-        $got = 0;
-        $sub = $this->c->queueSubscribe($subject, 'testQueueGroup', function ($message) use (&$got) {
+        $got1 = 0;
+        $allSeqs = [];
+        $sub1 = $c1->queueSubscribe($subject, $group, function ($message) use (&$got1, &$allSeqs) {
             /**
              * @var $message MsgProto
              */
-            $this->assertEquals($got + 1, $message->getSequence());
-            $got ++;
+            $allSeqs["client1"][] = $message->getSequence();
+            $got1 ++;
+        }, $subOptions);
+
+        $got2 = 0;
+        $sub2 = $c2->queueSubscribe($subject, $group, function ($message) use (&$got2, &$allSeqs) {
+            /**
+             * @var $message MsgProto
+             */
+            $allSeqs["client2"][] = $message->getSequence();
+            $got2 ++;
         }, $subOptions);
 
         $rs = [];
         for ($i = 0; $i < $toSend; $i++) {
-            $rs[] = $this->c->publish($subject, 'foobar' . $i);
+            $rs[] = $c1->publish($subject, 'foobar' . $i);
         }
 
         foreach ($rs as $r) {
@@ -472,12 +491,26 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
             $this->assertTrue($gotAck);
         }
 
-        $sub->wait($toSend);
+        $c1->natsCon()->setStreamTimeout(1);
+        $c2->natsCon()->setStreamTimeout(1);
+        $c1->wait();
+        $c2->wait();
 
 
-        $this->assertEquals($toSend, $got);
+        $client1Seqs = $allSeqs["client1"];
+        $client2Seqs = $allSeqs["client2"];
 
-        $this->c->close();
+        $totSeqs = array_merge($client1Seqs, $client2Seqs);
+
+        $totSeqsUnique = array_unique($totSeqs);
+
+
+        $this->assertEquals($toSend, $got1 + $got2);
+
+        $this->assertEquals($toSend, count($totSeqsUnique));
+
+        $c1->close();
+        $c2->close();
     }
 
     /**

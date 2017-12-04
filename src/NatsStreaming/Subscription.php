@@ -84,6 +84,7 @@ class Subscription
 
         $subRequest = new SubscriptionRequest();
         $subRequest->setSubject($this->getSubject());
+        $subRequest->setQGroup($this->qGroup);
         $subRequest->setClientID($this->stanCon->options->getClientID());
         $subRequest->setAckWaitInSecs($this->opts->getAckWaitSecs());
         $subRequest->setMaxInFlight($this->opts->getMaxInFlight());
